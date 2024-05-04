@@ -91,7 +91,6 @@ document.addEventListener("DOMContentLoaded", (e) => {
                 card.classList.add('highlight_select');
             })
             window.api.getSelectedCount();
-
         })
 
         // New Tav

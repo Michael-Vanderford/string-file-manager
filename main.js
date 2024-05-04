@@ -464,9 +464,13 @@ thumb.on('message', (data) => {
     }
 })
 
+// Find worker
 find.on('message', (data) => {
-    if (data.cmd === 'search_done') {
+    if (data.cmd === 'search_results') {
         win.send('search_results', data.results_arr);
+    }
+    if (data.cmd === 'msg') {
+        win.send('msg', data.msg, data.has_timeout);
     }
 })
 
@@ -1150,16 +1154,43 @@ ipcMain.on('columns', (e) => {
 // }
 
 // Find command
-ipcMain.handle('find', async (e, cmd) => {
+// ipcMain.handle('find', async (e, cmd) => {
 
-    try {
-        const res = execPromise(cmd);
-        return res;
-    } catch (err) {
-        win.send('msg', err);
-        throw err;
-    }
+//     try {
+//         const res = execPromise(cmd);
+//         return res;
+//     } catch (err) {
+//         win.send('msg', err);
+//         throw err;
+//     }
 
+// })
+
+ipcMain.on('find', async (e, find_cmd) => {
+
+    find.postMessage({ cmd: 'find', find_cmd: find_cmd });
+
+    // try {
+    //     execPromise(cmd).then(res => {
+    //         let arr = []
+    //         res.forEach(item => {
+    //             try {
+    //                 arr.push(gio.get_file(item));
+    //             } catch (err) {
+    //                 win.send('msg', err);
+    //             }
+    //         })
+    //         win.send('search_results', (e, arr))
+
+    //     }).catch(err => {
+    //         win.send('msg', err);
+    //     })
+    //     // return res;
+    //     // win.send('search_results', res);
+    // } catch (err) {
+    //     win.send('msg', err);
+    //     throw err;
+    // }
 })
 
 ipcMain.handle('df', async (e) => {

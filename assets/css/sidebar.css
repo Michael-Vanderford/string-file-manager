@@ -8,7 +8,7 @@
     box-sizing: border-box;
     background-color: var(--sidebar);
     /* background: linear-gradient(to right, var(--sidebar), var(--main)); */
-    color: white;
+    color: var(--text);
     padding-left: 10px;
     padding-right: 10px;
     /* height: 90%; */
