@@ -2798,6 +2798,38 @@ class ViewManager {
 
     }
 
+    getListView () {
+
+        const myArray = [["Item 1", "Value 1"], ["Item 2", "Value 2"], ["Item 3", "Value 3"]];
+        const tableBody = document.getElementById("table_body");
+
+        // Check if you have table headers defined
+        const hasTableHeader = document.querySelector("thead");
+
+        myArray.forEach((rowData) => {
+        const tableRow = document.createElement("tr");
+
+        // Add table headers if defined
+        if (hasTableHeader) {
+            rowData.forEach((cellData) => {
+            const tableHeader = document.createElement("th");
+            tableHeader.textContent = cellData;
+            tableRow.appendChild(tableHeader);
+            });
+        } else {
+            // Add table data cells
+            rowData.forEach((cellData) => {
+            const tableCell = document.createElement("td");
+            tableCell.textContent = cellData;
+            tableRow.appendChild(tableCell);
+            });
+        }
+
+        tableBody.appendChild(tableRow);
+        });
+
+    }
+
     /**
      *
      * @param {string} s_view
