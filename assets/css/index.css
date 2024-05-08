@@ -144,6 +144,90 @@ body {
     line-height: 18px;
 }
 
+
+.list_view {
+
+}
+
+.list_view table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: -10px;
+}
+
+.list_view th {
+    height: 23px;
+    position: sticky;
+    top: -10px;
+    padding-bottom: 2px;
+    background: var(--main);
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+}
+
+.list_view tr:hover {
+    background: var(--highlight);
+    border-radius: 5px;
+}
+
+.list_view td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* max-width: 25px; */
+    padding:2px;
+    border: 0;
+}
+
+.list_view td:first-child {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.list_view td:last-child {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.list_view th.name {
+    width: 350px;
+}
+
+.list_view th.modified {
+    max-height: 150px;
+}
+
+.list_view th.created {
+    max-width: 150px;
+}
+
+.list_view th.type {
+    max-width: 50px;
+}
+
+.list_view th.size {
+    width: 50px;
+}
+
+.list_view th.count {
+    width: 50px;
+}
+
+.list_view a {
+    padding: 2px;
+    color: var(--text);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width:100%;
+}
+
+.list_view td .name {
+    display: flex;
+}
+
 /* Progress input */
 progress {
     height: 15px;
@@ -836,6 +920,14 @@ th {
     width: 15%;
 }
 
+.list .item.date {
+    width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+}
+
 .list .item.size {
     width: 100px;
 }
@@ -847,7 +939,6 @@ th {
 .table {
     table-layout: fixed;
     width: 100%;
-    /* border-collapse: collapse; */
 }
 
 .table thead {
@@ -858,7 +949,6 @@ th {
 .table thead td {
     font-weight: bold;
     padding-bottom: 5px;
-    /* border-bottom: 1px solid var(--border); */
 }
 
 .table thead th:nth-child(1) {

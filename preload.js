@@ -683,9 +683,9 @@ class Utilities {
             ipcRenderer.send('main', 0);
             if (!card.classList.contains('highlight') && card.classList.contains('highlight_target')) {
                 if (e.ctrlKey) {
-                    fileOperation.paste(file.href);
+                    fileOperations.paste(file.href);
                 } else {
-                    fileOperation.move(file.href);
+                    fileOperations.move(file.href);
                 }
             } else {
                 // console.log('did not find target')
@@ -871,50 +871,50 @@ class Utilities {
 
         }
 
-        if (view == 'list') {
+        // if (view == 'list') {
 
-            card.classList.add('list');
-            content.classList.add('list');
-            // console.log(settings.Captions)
-            for (const key in settings.Captions) {
+        //     card.classList.add('list');
+        //     content.classList.add('list');
+        //     // console.log(settings.Captions)
+        //     for (const key in settings.Captions) {
 
-                if (settings.Captions[key]) {
+        //         if (settings.Captions[key]) {
 
-                    switch (key) {
-                        case 'Location':
-                            path.classList.remove('hidden')
-                            path.append(file.location)
-                            break;
-                        case 'Modified':
-                            mtime.classList.remove('hidden')
-                            break;
-                        case 'Created':
-                            ctime.classList.remove('hidden')
-                            break;
-                        case 'Accessed':
-                            atime.classList.remove('hidden')
-                            break;
-                        case 'Type':
-                            type.classList.remove('hidden')
-                            break;
-                        case 'Size':
-                            size.classList.remove('hidden')
-                            break;
-                        case 'Count':
-                            count.classList.remove('hidden')
-                            break;
-                    }
+        //             switch (key) {
+        //                 case 'Location':
+        //                     path.classList.remove('hidden')
+        //                     path.append(file.location)
+        //                     break;
+        //                 case 'Modified':
+        //                     mtime.classList.remove('hidden')
+        //                     break;
+        //                 case 'Created':
+        //                     ctime.classList.remove('hidden')
+        //                     break;
+        //                 case 'Accessed':
+        //                     atime.classList.remove('hidden')
+        //                     break;
+        //                 case 'Type':
+        //                     type.classList.remove('hidden')
+        //                     break;
+        //                 case 'Size':
+        //                     size.classList.remove('hidden')
+        //                     break;
+        //                 case 'Count':
+        //                     count.classList.remove('hidden')
+        //                     break;
+        //             }
 
-                }
+        //         }
 
-            }
+        //     }
 
-            let list_header = add_div(['item', 'list', 'list_header'])
-            list_header.append(icon, header)
-            // header.append(list_header);
-            content.append(list_header, path, mtime, ctime, atime, type, size, count);
-            card.append(content, tooltip);
-        }
+        //     let list_header = add_div(['item', 'list', 'list_header'])
+        //     list_header.append(icon, header)
+        //     // header.append(list_header);
+        //     content.append(list_header, path, mtime, ctime, atime, type, size, count);
+        //     card.append(content, tooltip);
+        // }
 
         if (view === 'grid') {
             card.classList.remove('list');
@@ -1276,19 +1276,27 @@ class IconManager {
 
     resizeIcons(icon_size) {
         // console.log('resizing icons to', icon_size)
-        let cards = document.querySelectorAll('.card');
-        cards.forEach(card => {
-            // if (!card.classList.contains('list')) {
-                let icon = card.querySelector('.icon');
-                icon.style.width = `${icon_size}px`;
-                icon.style.height = `${icon_size}px`;
-            // }
+        // let cards = document.querySelectorAll('.card');
+        // cards.forEach(card => {
+        //     // if (!card.classList.contains('list')) {
+        //         let icon = card.querySelector('.icon');
+        //         icon.style.width = `${icon_size}px`;
+        //         icon.style.height = `${icon_size}px`;
+        //     // }
+        // })
+
+        let icons = document.querySelectorAll('.icon');
+        icons.forEach(icon => {
+            icon.style.width = `${icon_size}px`;
+            icon.style.height = `${icon_size}px`;
         })
+
         if (view === 'grid') {
             localStorage.setItem('icon_size', icon_size);
         } else if (view === 'list') {
             localStorage.setItem('list_icon_size', icon_size);
         }
+
         this.slider.value = icon_size;
     }
 
@@ -1583,7 +1591,7 @@ class Navigation {
             let sidebar = document.querySelector('.sidebar');
             sidebar.append(sb_home);
 
-            let connect_btn = add_button('+'); //add_link('', '+');
+            let connect_btn = add_button('+');
             connect_btn.classList.add('bottom', 'button', 'show_connect');
             connect_btn.title = 'Connect to a server';
             sidebar.appendChild(connect_btn);
@@ -2800,33 +2808,220 @@ class ViewManager {
 
     getListView () {
 
-        const myArray = [["Item 1", "Value 1"], ["Item 2", "Value 2"], ["Item 3", "Value 3"]];
-        const tableBody = document.getElementById("table_body");
+        console.log('running get list view')
 
-        // Check if you have table headers defined
-        const hasTableHeader = document.querySelector("thead");
+        let dirents = fileOperations.dirents
 
-        myArray.forEach((rowData) => {
-        const tableRow = document.createElement("tr");
+        let active_content = document.querySelector('.active-tab-content');
+        // active_content.innerHTML = '';
 
-        // Add table headers if defined
-        if (hasTableHeader) {
-            rowData.forEach((cellData) => {
-            const tableHeader = document.createElement("th");
-            tableHeader.textContent = cellData;
-            tableRow.appendChild(tableHeader);
-            });
-        } else {
-            // Add table data cells
-            rowData.forEach((cellData) => {
-            const tableCell = document.createElement("td");
-            tableCell.textContent = cellData;
-            tableRow.appendChild(tableCell);
-            });
+        if (dirents.length === 0) {
+            const empty_msg = add_div(['empty_msg']);
+            empty_msg.innerHTML = 'Folder is Empty';
+            active_content.append(empty_msg);
+            return;
         }
 
-        tableBody.appendChild(tableRow);
-        });
+        fetch('views/list.html').then(response => {
+            return response.text();
+        }).then(data => {
+
+            // Add view to active tab
+            // active_content.innerHTML = data;
+
+            // column headers array
+            const columnHeaders = Object.keys(settings.Captions).filter(
+                (caption) => settings.Captions[caption] === true
+            );
+
+            // check if th exists
+            let th = document.querySelector("th");
+            if (!th) {
+
+                console.log('th does not exist')
+
+                // load table
+                active_content.innerHTML = data;
+
+                // get header rows
+                const headerRow = document.createElement("tr");
+                columnHeaders.forEach((header) => {
+                    const th = document.createElement("th");
+                    th.textContent = header;
+                    th.classList.add(header.toLocaleLowerCase());
+                    headerRow.appendChild(th);
+                });
+
+                // add header
+                document.querySelector("thead").appendChild(headerRow);
+
+            } else {
+                th.classList.remove('hidden');
+            }
+
+            const tbody = document.getElementById("table_body");
+            tbody.innerHTML = '';
+
+
+            // map columns
+            let mapped_columns = {};
+            columnHeaders.forEach((property) => {
+                let mapped_property = '';
+                switch (property) {
+                    case 'Name': {
+                        mapped_property = 'display_name';
+                        break;
+                    }
+                    case 'Location': {
+                        mapped_property = 'location';
+                        break;
+                    }
+                    case 'Modified': {
+                        mapped_property = 'mtime';
+                        break;
+                    }
+                    case 'Created': {
+                        mapped_property = 'ctime';
+                        break;
+                    }
+                    case 'Accessed': {
+                        mapped_property = 'atime';
+                        break;
+                    }
+                    case 'Type': {
+                        mapped_property = 'content_type';
+                        break;
+                    }
+                    case 'Size': {
+                        mapped_property = 'size';
+                        break;
+                    }
+                    case 'Count': {
+                        mapped_property = 'count';
+                        break;
+                    }
+                }
+                mapped_columns[property] = mapped_property;
+            })
+
+            // filter hidden files
+            const show_hidden = localStorage.getItem('show_hidden');
+            if (!show_hidden) {
+                dirents = dirents.filter((dirent) => !dirent.is_hidden);
+            }
+
+            dirents.sort((a, b) => {
+                if (a.is_dir && !b.is_dir) {
+                    return -1;
+                } else if (!a.is_dir && b.is_dir) {
+                    return 1;
+                } else {
+                    return a.display_name.localeCompare(b.display_name);
+                }
+            });
+
+            // populate data
+            dirents.forEach((rowData) => {
+
+                let file = rowData;
+                let img = document.createElement('img');
+                let folder_count = add_div(['count']);
+                let href = rowData['href'];
+
+                let name = add_div(['name']);
+                let display_name = add_div(['display_name']);
+                let link = add_link(href, rowData['display_name']);
+
+                let display_name_edit = add_div(['display_name_edit']);
+                let input = document.createElement('input');
+
+                const tr = document.createElement("tr");
+
+                input.classList.add('hidden','input');
+                input.value = rowData['display_name'];
+
+                // check if directory
+                let is_dir = rowData['is_dir'];
+
+                img.classList.add('icon');
+                tr.dataset.href = href;
+
+                columnHeaders.forEach((property) => {
+
+                    const mapped_property = mapped_columns[property];
+                    const td = document.createElement("td");
+                    let cellContent = rowData[mapped_property] || "";
+
+                    switch (mapped_property) {
+                        case 'display_name':
+
+                            display_name.append(link, input);
+                            display_name_edit.append(input);
+
+                            name.append(img, display_name, display_name_edit);
+
+                            if (is_dir) {
+                                utilities.getFolderIcon(file).then(folder_icon => {
+                                    img.src = folder_icon;
+                                })
+                            } else {
+                                ipcRenderer.invoke('get_icon', href).then(icon => {
+                                    img.src = icon;
+                                })
+                            }
+                            cellContent = name;
+                            break;
+                        case 'mtime':
+                        case 'ctime':
+                        case 'atime':
+                            cellContent = getDateTime(rowData[mapped_property]) || '';
+                            break;
+                        case 'size':
+                            cellContent = getFileSize(rowData[mapped_property]);
+                            break;
+                        case 'count':
+                            if (is_dir) {
+                                cellContent = folder_count;
+                            }
+                            break
+                    }
+
+                    td.append(cellContent);
+                    tr.appendChild(td);
+
+
+                });
+
+                // highlight for edit mode
+                tr.addEventListener('mouseenter', (e) => {
+                    tr.classList.add('highlight');
+                })
+
+                tr.addEventListener('mouseleave', (e) => {
+                    tr.classList.remove('highlight');
+                })
+
+                // add event listener to link
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (is_dir) {
+                        viewManager.getView(rowData['href']);
+                    } else {
+                        ipcRenderer.send('open', rowData['href']);
+                    }
+                })
+
+                tbody.appendChild(tr);
+
+            });
+
+            let icon_size = iconManager.getIconSize();
+            iconManager.resizeIcons(icon_size);
+
+            getFolderCount();
+
+        })
+
 
     }
 
@@ -2845,7 +3040,7 @@ class ViewManager {
                 break;
             }
             case 'list': {
-                this.listView();
+                this.getListView();
                 break;
             }
         }
@@ -3240,17 +3435,21 @@ class ViewManager {
 
 }
 
-class FileOperation {
+class FileOperations {
 
     constructor() {
         this.location = document.querySelector('.location')
         this.cut_flag = 0;
+        this.dirents = [];
 
         // On ls - Get Directory
         // ipcRenderer.on('ls', (e, dirents, source, tab) => {
         ipcRenderer.on('ls', (e, data) => {
 
             let st = new Date().getTime();
+
+            // set dirents for views
+            this.dirents = data.dirents;
 
             let dirents = data.dirents;
             let source = data.source;
@@ -3316,7 +3515,7 @@ class FileOperation {
             let active_tab = document.querySelector('.active-tab');
             let active_label = active_tab.querySelector('.label')
             let active_tab_content = document.querySelector('.active-tab-content');
-            active_tab_content.innerHTML = '';
+            // active_tab_content.innerHTML = '';
 
             active_tab.dataset.href = source;
             active_tab.title = source;
@@ -3392,80 +3591,84 @@ class FileOperation {
             location.value = source;
             document.title = display_name;
 
-            let header = active_tab_content.querySelector('.header_row')
-            if (!header) {
-                header = add_div();
-                header.classList.add('header_row', 'content', 'list', 'sticky');
-                header.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation()
-                    ipcRenderer.send('columns_menu')
-                })
-                let colNames = [];
-                let colClasses = [];
+            // let header = active_tab_content.querySelector('.header_row')
+            // if (!header) {
+            //     header = add_div();
+            //     header.classList.add('header_row', 'content', 'list', 'sticky');
+            //     header.addEventListener('contextmenu', (e) => {
+            //         e.preventDefault();
+            //         e.stopPropagation()
+            //         ipcRenderer.send('columns_menu')
+            //     })
+            //     let colNames = [];
+            //     let colClasses = [];
 
-                for (const key in settings.Captions) {
-                    if (settings.Captions[key] === true) {
-                        colNames.push(key)
-                        colClasses.push(key.toLowerCase());
-                    }
-                }
+            //     for (const key in settings.Captions) {
+            //         if (settings.Captions[key] === true) {
+            //             colNames.push(key)
+            //             colClasses.push(key.toLowerCase());
+            //         }
+            //     }
 
-                // let colNames = ['Name', 'Modified', 'Size', 'Items'];
-                // let colClasses = ['name', 'date', 'size', 'items'];
-                let sort_by = '_desc'
-                let headerRow = colNames.map((colName, index) => {
+            //     // let colNames = ['Name', 'Modified', 'Size', 'Items'];
+            //     // let colClasses = ['name', 'date', 'size', 'items'];
+            //     let sort_by = '_desc'
+            //     let headerRow = colNames.map((colName, index) => {
 
-                    let col = add_div();
-                    col.classList.add('item', colClasses[index]);
-                    col.append(colName);
-                    col.addEventListener('click', (e) => {
+            //         let col = add_div();
+            //         col.classList.add('item', colClasses[index]);
+            //         col.append(colName);
+            //         col.addEventListener('click', (e) => {
 
-                        sort = colName.toLocaleLowerCase();
-                        if (sort === 'name' || sort === 'modified' || sort === 'created' || sort === 'accessed') {
-                            if (sort_by === '_desc') {
-                                sort_by = '_asc'
-                            } else if (sort_by === '_asc') {
-                                sort_by = '_desc'
-                            }
-                            localStorage.setItem('sort', `${sort}${sort_by}`);
-                        }
+            //             sort = colName.toLocaleLowerCase();
+            //             if (sort === 'name' || sort === 'modified' || sort === 'created' || sort === 'accessed') {
+            //                 if (sort_by === '_desc') {
+            //                     sort_by = '_asc'
+            //                 } else if (sort_by === '_asc') {
+            //                     sort_by = '_desc'
+            //                 }
+            //                 localStorage.setItem('sort', `${sort}${sort_by}`);
+            //             }
 
-                        if (sort === 'size' || sort === 'items') {
-                            localStorage.setItem('sort', `${sort}`)
-                        }
+            //             if (sort === 'size' || sort === 'items') {
+            //                 localStorage.setItem('sort', `${sort}`)
+            //             }
 
-                        sort_cards();
+            //             sort_cards();
 
-                    })
+            //         })
 
-                    return col;
-                });
-                header.append(...headerRow);
-                active_tab_content.append(header)
+            //         return col;
+            //     });
+            //     header.append(...headerRow);
+            //     active_tab_content.append(header)
 
-            }
+            // }
 
             if (view == 'list') {
 
-                // viewManager.listView(dirents)
-                header.classList.remove('hidden');
+                viewManager.getListView()
 
-                const list_view_columns = add_div();
-                list_view_columns.className = 'list_view_columns';
-                list_view_columns.innerHTML = '';
+                // // viewManager.listView(dirents)
+                // header.classList.remove('hidden');
 
-                list_view.classList.add('active');
-                grid_view.classList.remove('active');
+                // const list_view_columns = add_div();
+                // list_view_columns.className = 'list_view_columns';
+                // list_view_columns.innerHTML = '';
 
-                [folder_grid, file_grid, hidden_folder_grid, hidden_file_grid].forEach((element) => {
-                    element.classList.remove('grid');
-                    element.classList.add('grid1');
-                });
+                // list_view.classList.add('active');
+                // grid_view.classList.remove('active');
+
+                // [folder_grid, file_grid, hidden_folder_grid, hidden_file_grid].forEach((element) => {
+                //     element.classList.remove('grid');
+                //     element.classList.add('grid1');
+                // });
 
             } else if (view === 'grid') {
 
-                header.classList.add('hidden');
+                active_tab_content.innerHTML = '';
+
+                // header.classList.add('hidden');
 
                 list_view.classList.remove('active');
                 grid_view.classList.add('active');
@@ -4041,7 +4244,7 @@ class WorkspaceManager {
 }
 
 // Get reference to File Operations
-let fileOperation = new FileOperation();
+let fileOperations = new FileOperations();
 let viewManager = null; //new ViewManager();
 let settings = null;
 let settingsManager = null;
@@ -4090,16 +4293,16 @@ contextBridge.exposeInMainWorld('api', {
     },
     getSelectedFiles,
     cut: () => {
-        fileOperation.cut();
+        fileOperations.cut();
     },
     pasteOperation: () => {
-        fileOperation.pasteOperation()
+        fileOperations.pasteOperation()
     },
     edit: () => {
-        fileOperation.edit();
+        fileOperations.edit();
     },
     newFolder: () => {
-        fileOperation.newFolder()
+        fileOperations.newFolder()
     },
     find_files: find_view,
     quickSearch: () => {
@@ -4115,16 +4318,16 @@ contextBridge.exposeInMainWorld('api', {
         navigation.initSidebar();
     },
     fileInfo: () => {
-        fileOperation.fileInfo();
+        fileOperations.fileInfo();
     },
     settingsView: () => {
         settingsManager.settingsView();
     },
     extract: () => {
-        fileOperation.extract();
+        fileOperations.extract();
     },
     compress: () => {
-        fileOperation.compress('tar.gz');
+        fileOperations.compress('tar.gz');
     },
     addWorkspace: () => {
         // Add to Workspace
@@ -4860,23 +5063,23 @@ ipcRenderer.on('context-menu-command', (e, cmd) => {
 
     switch (cmd) {
         case 'rename': {
-            fileOperation.edit();
+            fileOperations.edit();
             break;
         }
         case 'mkdir': {
-            fileOperation.newFolder()
+            fileOperations.newFolder()
             break;
         }
         case 'copy': {
-            fileOperation.copy();
+            fileOperations.copy();
             break
         }
         case 'paste': {
-            fileOperation.paste(location.value);
+            fileOperations.paste(location.value);
             break;
         }
         case 'delete': {
-            fileOperation.delete();
+            fileOperations.delete();
             break;
         }
         case 'terminal': {
@@ -4917,22 +5120,22 @@ ipcRenderer.on('context-menu-command', (e, cmd) => {
             break;
         }
         case 'compress': {
-            fileOperation.compress('tar.gz');
+            fileOperations.compress('tar.gz');
             break;
         }
         case 'compress_zip': {
-            fileOperation.compress('zip');
+            fileOperations.compress('zip');
             break;
         }
         case 'extract': {
-            fileOperation.extract();
+            fileOperations.extract();
             break;
         }
         case 'properties': {
             // getSelectedFiles();
             // ipcRenderer.send('get_properties', selected_files_arr);
             // clear();
-            fileOperation.fileInfo();
+            fileOperations.fileInfo();
             break;
         }
         case 'sidebar_properties': {
