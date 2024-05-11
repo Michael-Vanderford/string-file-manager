@@ -21,6 +21,10 @@
     "Minibar": {
         "show": true
     },
+    "Sort": {
+        "by": "modified",
+        "order": "desc"
+    },
     "keyboard_shortcuts": {
         "Backspace": "Backspace",
         "ShowHome": "Alt+H",

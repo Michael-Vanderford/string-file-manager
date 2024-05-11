@@ -164,6 +164,7 @@ body {
     background: var(--main);
     border-bottom: 1px solid var(--border);
     z-index: 1;
+    cursor: pointer;
 }
 
 .list_view tr:hover {
@@ -194,6 +195,29 @@ body {
     width: 350px;
 }
 
+.list_view .name {
+    /* border: 1px solid var(--border); */
+    align-items: center;
+}
+
+.list_view .display_name {
+    width: 90%;
+}
+
+.list_view a {
+    padding: 2px;
+    color: var(--text);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width:100%;
+}
+
+.list_view .input {
+    width: 100%;
+}
+
 .list_view th.modified {
     max-height: 150px;
 }
@@ -214,14 +238,8 @@ body {
     width: 50px;
 }
 
-.list_view a {
-    padding: 2px;
-    color: var(--text);
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width:100%;
+.list_view td {
+    vertical-align: middle;
 }
 
 .list_view td .name {

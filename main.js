@@ -1670,6 +1670,13 @@ ipcMain.on('saveRecentFile', (e, href) => {
     saveRecentFile(href);
 })
 
+ipcMain.on('save_settings', (e, settings) => {
+
+    settingsManger.updateSettings(settings);
+    // win.send('msg', 'Settings updated')
+
+})
+
 ipcMain.on('update_settings', (e, keys = [], value) => {
 
     let path = ''

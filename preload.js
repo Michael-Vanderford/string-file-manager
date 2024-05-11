@@ -519,10 +519,10 @@ class Utilities {
         let header = add_div(['header', 'item']);
         let href = document.createElement('a');
         let path = add_div(['path', 'item', 'hidden']);
-        let mtime = add_div(['date', 'mtime', 'item', 'hidden']);
+        let mtime = add_div(['date', 'mtime', 'item']);
         let atime = add_div(['date', 'atime', 'item', 'hidden']);
         let ctime = add_div(['date', 'ctime','item', 'hidden']);
-        let size = add_div(['size', 'item', 'hidden']);
+        let size = add_div(['size', 'item']);
         let type = add_div(['type', 'item', 'hidden']);
         let count = add_div(['count', 'item', 'hidden']);
         let input = document.createElement('input');
@@ -538,7 +538,6 @@ class Utilities {
         href.innerHTML = file.display_name;
         input.value = file.display_name;
         card.dataset.name = file.name;
-
 
         input.spellcheck = false;
         input.type = 'text';
@@ -792,18 +791,6 @@ class Utilities {
 
                         img.dataset.src = file.href;
 
-                        // if (file.href.indexOf('thumbnails') > 1) {
-                        //     img.src = file.href
-                        // } else if (file.href.indexOf('mtp') > -1) {
-                        //     ipcRenderer.invoke('get_thumbnail', file).then(thumbnail => {
-                        //         img.src = thumbnail;
-                        //     })
-                        // } else {
-                        //     ipcRenderer.invoke('get_thumbnail', file).then(thumbnail => {
-                        //         img.src = thumbnail;
-                        //     })
-                        // }
-
                     }
                 } else if (file.content_type.indexOf('video/') > -1) {
 
@@ -817,10 +804,6 @@ class Utilities {
                         ipcRenderer.send('open', file.href);
                         ipcRenderer.send('saveRecentFile', file.href);
                     })
-                    // icon_div.append(add_canvas(file));
-                    // ipcRenderer.invoke('get_icon', (file.href)).then(res => {
-                    //     img.src = res;
-                    // })
                 } else {
                     ipcRenderer.invoke('get_icon', (file.href)).then(res => {
                         img.src = res;
@@ -831,6 +814,7 @@ class Utilities {
                     img.src = res;
                 })
             }
+
             // Open href in default application
             href.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -871,59 +855,8 @@ class Utilities {
 
         }
 
-        // if (view == 'list') {
-
-        //     card.classList.add('list');
-        //     content.classList.add('list');
-        //     // console.log(settings.Captions)
-        //     for (const key in settings.Captions) {
-
-        //         if (settings.Captions[key]) {
-
-        //             switch (key) {
-        //                 case 'Location':
-        //                     path.classList.remove('hidden')
-        //                     path.append(file.location)
-        //                     break;
-        //                 case 'Modified':
-        //                     mtime.classList.remove('hidden')
-        //                     break;
-        //                 case 'Created':
-        //                     ctime.classList.remove('hidden')
-        //                     break;
-        //                 case 'Accessed':
-        //                     atime.classList.remove('hidden')
-        //                     break;
-        //                 case 'Type':
-        //                     type.classList.remove('hidden')
-        //                     break;
-        //                 case 'Size':
-        //                     size.classList.remove('hidden')
-        //                     break;
-        //                 case 'Count':
-        //                     count.classList.remove('hidden')
-        //                     break;
-        //             }
-
-        //         }
-
-        //     }
-
-        //     let list_header = add_div(['item', 'list', 'list_header'])
-        //     list_header.append(icon, header)
-        //     // header.append(list_header);
-        //     content.append(list_header, path, mtime, ctime, atime, type, size, count);
-        //     card.append(content, tooltip);
-        // }
-
-        if (view === 'grid') {
-            card.classList.remove('list');
-            content.classList.remove('list');
-            mtime.classList.remove('hidden')
-            size.classList.remove('hidden')
-            content.append(header, path, mtime, ctime, atime, type, size, count);
-            card.append(icon, content, tooltip);
-        }
+        content.append(header, path, mtime, ctime, atime, type, size, count);
+        card.append(icon, content, tooltip);
 
         return card;
     }
@@ -1141,7 +1074,77 @@ class Utilities {
         }
     }
 
-    getIcon(href) {
+    getIcon(file, icon_div) {
+
+        try {
+
+            let img = document.createElement('img');
+            let video = document.createElement('video');
+
+            let icon_size;
+            if (view === 'list') {
+                icon_size = localStorage.getItem('list_icon_size');
+            } else if (view === 'grid') {
+                icon_size = localStorage.getItem('icon_size');
+            }
+
+            img.style.width = `${icon_size}px`;
+
+            if (file.content_type.indexOf('image/') > -1) {
+
+                // Load generic icon
+                img.src = './assets/icons/image-generic.svg';
+                img.dataset.content_type = file.content_type;
+
+                if (file.content_type === 'image/x-xcf') {
+                    img.classList.remove('lazy')
+                    ipcRenderer.invoke('get_icon', (file.href)).then(res => {
+                        img.src = res;
+                    })
+                } else if (file.content_type === 'image/svg+xml') {
+                    img.classList.add('lazy')
+                    img.dataset.src = file.href;
+                    img.classList.add('svg')
+                } else if (file.content_type === 'image/webp') {
+                    img.src = file.href;
+                } else if (file.content_type === 'image/gif') {
+                    img.src = file.href;
+                } else {
+                    img.classList.add('lazy')
+                    img.src = './assets/icons/image-generic.svg';
+                    img.dataset.src = file.href;
+                }
+
+                icon_div.append(img);
+
+            } else if (file.content_type.indexOf('video/') > -1) {
+
+                // let video = add_canvas(file);
+                video.src = file.href;
+                video.classList.add('icon');
+                icon_div.append(video);
+
+            // directory
+            } else if (file.content_type === 'inode/directory') {
+
+                utilities.getFolderIcon(file).then(folder_icon => {
+                    img.src = folder_icon;
+                    icon_div.append(img);
+                })
+
+            } else {
+                ipcRenderer.invoke('get_icon', (file.href)).then(res => {
+                    img.src = res;
+                    icon_div.append(img);
+                })
+            }
+
+        } catch (err) {
+            ipcRenderer.invoke('get_icon', (file.href)).then(res => {
+                img.src = res;
+                icon_div.append(img);
+            })
+        }
 
     }
 
@@ -1193,7 +1196,6 @@ class Utilities {
                 })
             })
         })
-
     }
 
     /**
@@ -1284,8 +1286,8 @@ class IconManager {
         //         icon.style.height = `${icon_size}px`;
         //     // }
         // })
-
-        let icons = document.querySelectorAll('.icon');
+        let active_tab_content = document.querySelector('.active-tab-content');
+        let icons = active_tab_content.querySelectorAll('.icon');
         icons.forEach(icon => {
             icon.style.width = `${icon_size}px`;
             icon.style.height = `${icon_size}px`;
@@ -2806,28 +2808,170 @@ class ViewManager {
 
     }
 
+    /**
+     *
+     * @param {string} s_view
+     * Valid parameters are 'grid' or 'list'
+     */
+    switchView(s_view) {
+        view = s_view;
+        localStorage.setItem('view', view);
+
+        let active_tab_content = document.querySelector('.active-tab-content');
+        active_tab_content.innerHTML = '';
+
+        switch (view) {
+            case 'grid': {
+                this.getGridView();
+                break;
+            }
+            case 'list': {
+                this.getListView();
+                break;
+            }
+        }
+    }
+
+    getGridView () {
+
+        let main = document.querySelector('.main');
+        let active_tab_content = document.querySelector('.active-tab-content');
+
+        // get stored dirents
+        let dirents = fileOperations.dirents;
+
+        let folder_grid = active_tab_content.querySelector('.folder_grid');
+        if (!folder_grid) {
+            folder_grid = add_div(['folder_grid', 'grid']);
+            folder_grid.id = 'folder_grid'
+        }
+        let file_grid = active_tab_content.querySelector('.file_grid');
+        if (!file_grid) {
+            file_grid = add_div(['file_grid', 'grid'])
+            file_grid.id = 'file_grid'
+        }
+
+        let hidden_folder_grid = active_tab_content.querySelector('.hidden_folder_grid');
+        if (!hidden_folder_grid) {
+            hidden_folder_grid = add_div(['hidden_folder_grid', 'grid']);
+            hidden_folder_grid.id = 'hidden_folder_grid';
+        }
+
+        let hidden_file_grid = active_tab_content.querySelector('.hidden_file_grid');
+        if (!hidden_file_grid) {
+            hidden_file_grid = add_div(['hidden_file_grid', 'grid']);
+            hidden_file_grid.id = 'hidden_file_grid';
+        }
+
+        if (localStorage.getItem('show_hidden') !== null) {
+            let show_hidden_icon = document.querySelector('.show_hidden')
+            let show_hidden = parseInt(localStorage.getItem('show_hidden'));
+            if (show_hidden) {
+                hidden_folder_grid.classList.remove('hidden');
+                hidden_file_grid.classList.remove('hidden');
+                show_hidden_icon.classList.add('active')
+            } else {
+                hidden_folder_grid.classList.add('hidden');
+                hidden_file_grid.classList.add('hidden');
+                show_hidden_icon.classList.remove('active')
+            }
+        }
+
+        folder_grid.classList.add('folder_grid');
+        file_grid.classList.add('file_grid');
+        hidden_folder_grid.classList.add('hidden_folder_grid');
+        hidden_file_grid.classList.add('hidden_file_grid');
+
+
+        file_grid.draggable = false;
+        hidden_file_grid.draggable = false;
+        folder_grid.draggable = false;
+        hidden_folder_grid.draggable = false;
+
+        folder_grid.innerHTML = '';
+        file_grid.innerHTML = '';
+
+        hidden_folder_grid.innerHTML = '';
+        hidden_file_grid.innerHTML = '';
+
+        dirents = this.sort(dirents);
+
+        // Loop Files Array
+        for (let i = 0; i < dirents.length; i++) {
+
+            let file = dirents[i];
+            let card = utilities.getCard(file);
+
+            if (file.is_dir || file.content_type === 'inode/symlink') {
+
+                if (file.is_hidden) {
+                    hidden_folder_grid.append(card);
+                } else {
+                    folder_grid.append(card);
+                }
+
+                // this is slowing the load time down dont use for now
+                if (file.href.indexOf('mtp:') > -1) {
+
+                } else {
+                    // Call Get Folder Size
+                    getFolderCount(file.href);
+                }
+
+                auto_complete_arr.push(file.href);
+
+            } else {
+
+                if (file.is_hidden) {
+                    hidden_file_grid.append(card);
+                } else {
+                    file_grid.append(card);
+                }
+
+            }
+
+            if (!file.is_writable) {
+                card.classList.add('not-writable')
+            }
+
+        }
+
+        active_tab_content.append(folder_grid, hidden_folder_grid, file_grid, hidden_file_grid);
+
+        utilities.getFolderSizes();
+        this.lazyload();
+
+    }
+
     getListView () {
 
+        // when switching view the data needs to be loaded for both views
+
         console.log('running get list view')
-
-        let dirents = fileOperations.dirents
-
-        let active_content = document.querySelector('.active-tab-content');
-        // active_content.innerHTML = '';
-
-        if (dirents.length === 0) {
-            const empty_msg = add_div(['empty_msg']);
-            empty_msg.innerHTML = 'Folder is Empty';
-            active_content.append(empty_msg);
-            return;
-        }
 
         fetch('views/list.html').then(response => {
             return response.text();
         }).then(data => {
 
-            // Add view to active tab
-            // active_content.innerHTML = data;
+            let dirents = fileOperations.dirents
+            let active_tab_content = document.querySelector('.active-tab-content');
+
+            if (dirents.length === 0) {
+                const empty_msg = add_div(['empty_msg']);
+                empty_msg.innerHTML = 'Folder is Empty';
+                active_tab_content.append(empty_msg);
+                return;
+            }
+
+            // hide grids
+            let grids = ['folder_grid', 'hidden_folder_grid', 'file_grid', 'hidden_file_grid'];
+            grids.forEach(grid => {
+                console.log('grid', grid)
+                let grid_item = active_tab_content.querySelector(`.${grid}`);
+                if (grid_item) {
+                    grid_item.classList.add('hidden');
+                }
+            });
 
             // column headers array
             const columnHeaders = Object.keys(settings.Captions).filter(
@@ -2835,31 +2979,49 @@ class ViewManager {
             );
 
             // check if th exists
-            let th = document.querySelector("th");
+            let th = document.querySelector("thead");
             if (!th) {
 
-                console.log('th does not exist')
+                // add div to hold data
+                let list_container = add_div();
+                list_container.innerHTML = data;
 
                 // load table
-                active_content.innerHTML = data;
+                active_tab_content.append(list_container);
+
+                let sort_by = settings.Sort.by;
+                let sort_order = settings.Sort.order;
 
                 // get header rows
                 const headerRow = document.createElement("tr");
                 columnHeaders.forEach((header) => {
+
                     const th = document.createElement("th");
                     th.textContent = header;
                     th.classList.add(header.toLocaleLowerCase());
                     headerRow.appendChild(th);
+
+                    // sort by header
+                    th.addEventListener('click', (e) => {
+
+                        // sort by column
+                        sort_order = sort_order === 'asc' ? 'desc' : 'asc';
+
+                        settings.Sort.by = header.toLocaleLowerCase();
+                        settings.Sort.order = sort_order;
+                        ipcRenderer.send('save_settings', settings);
+                        this.getListView();
+
+                    });
+
                 });
 
                 // add header
                 document.querySelector("thead").appendChild(headerRow);
 
-            } else {
-                th.classList.remove('hidden');
             }
 
-            const tbody = document.getElementById("table_body");
+            const tbody = active_tab_content.querySelector(".table_body");
             tbody.innerHTML = '';
 
 
@@ -2920,11 +3082,13 @@ class ViewManager {
                 }
             });
 
+            dirents = this.sort(dirents);
+
             // populate data
             dirents.forEach((rowData) => {
 
                 let file = rowData;
-                let img = document.createElement('img');
+                let icon_div = add_div(['icon_div']);
                 let folder_count = add_div(['count']);
                 let href = rowData['href'];
 
@@ -2932,44 +3096,32 @@ class ViewManager {
                 let display_name = add_div(['display_name']);
                 let link = add_link(href, rowData['display_name']);
 
-                let display_name_edit = add_div(['display_name_edit']);
                 let input = document.createElement('input');
-
                 const tr = document.createElement("tr");
 
+                input.type = 'text';
                 input.classList.add('hidden','input');
                 input.value = rowData['display_name'];
 
                 // check if directory
                 let is_dir = rowData['is_dir'];
-
-                img.classList.add('icon');
                 tr.dataset.href = href;
 
                 columnHeaders.forEach((property) => {
 
                     const mapped_property = mapped_columns[property];
                     const td = document.createElement("td");
-                    let cellContent = rowData[mapped_property] || "";
+                    td.classList.add(mapped_property);
 
+                    let cellContent = rowData[mapped_property] || "";
                     switch (mapped_property) {
                         case 'display_name':
 
                             display_name.append(link, input);
-                            display_name_edit.append(input);
-
-                            name.append(img, display_name, display_name_edit);
-
-                            if (is_dir) {
-                                utilities.getFolderIcon(file).then(folder_icon => {
-                                    img.src = folder_icon;
-                                })
-                            } else {
-                                ipcRenderer.invoke('get_icon', href).then(icon => {
-                                    img.src = icon;
-                                })
-                            }
+                            name.append(icon_div, display_name);
+                            utilities.getIcon(file, icon_div);
                             cellContent = name;
+
                             break;
                         case 'mtime':
                         case 'ctime':
@@ -2980,15 +3132,14 @@ class ViewManager {
                             cellContent = getFileSize(rowData[mapped_property]);
                             break;
                         case 'count':
-                            if (is_dir) {
-                                cellContent = folder_count;
-                            }
-                            break
+                //             if (is_dir) {
+                //                 cellContent = folder_count;
+                //             }
+                //             break
                     }
 
                     td.append(cellContent);
                     tr.appendChild(td);
-
 
                 });
 
@@ -3019,44 +3170,28 @@ class ViewManager {
             iconManager.resizeIcons(icon_size);
 
             getFolderCount();
+            this.lazyload();
 
+        }).catch(err => {
+            console.log(err)
         })
 
 
     }
 
     /**
-     *
-     * @param {string} s_view
-     * Valid parameters are 'grid' or 'list'
-     */
-    switchView(s_view) {
-        view = s_view;
-        localStorage.setItem('view', view);
-        // this.getView(this.location.value);
-        switch (view) {
-            case 'grid': {
-                this.gridView();
-                break;
-            }
-            case 'list': {
-                this.getListView();
-                break;
-            }
-        }
-    }
-
-    /**
      * Grid View
      */
     gridView() {
-        // console.log('running grid view')
+        console.log('running grid view')
         let tabs_content = document.querySelectorAll('.tab-content');
         tabs_content.forEach((tab_content, idx) => {
 
-            let header_row = tab_content.querySelector('.header_row');
-            if (header_row) {
-                header_row.classList.add('hidden');
+            console.log('tab content', tab_content)
+
+            let list_view = tab_content.querySelector('.list_view');
+            if (list_view) {
+                list_view.classList.add('hidden');
             }
 
             let grids = ['.folder_grid', '.file_grid', '.hidden_folder_grid', '.hidden_file_grid'];
@@ -3064,34 +3199,11 @@ class ViewManager {
 
                 let grid_views = tab_content.querySelectorAll(grid);
                 grid_views.forEach(grid_view => {
-                    grid_view.classList.add('grid');
-                    grid_view.classList.remove('grid1');
 
-                    let cards = grid_view.querySelectorAll('.card');
-                    cards.forEach(card => {
-                        card.classList.remove('list');
+                    grid_view.classList.remove('hidden');
+                    // grid_view.classList.add('grid');
+                    // grid_view.classList.remove('grid1');
 
-                        let content = card.querySelector('.content');
-                        content.classList.remove('list');
-
-                        let item = content.querySelector('.item');
-                        item.classList.add('header');
-                        item.classList.remove('list', 'list_header');
-
-                        let icon_div = card.querySelector('.icon_div');
-                        icon_div.remove();
-                        card.prepend(icon_div);
-
-                        let atime = card.querySelector('.atime');
-                        atime.classList.add('hidden');
-
-                        let ctime = card.querySelector('.ctime');
-                        ctime.classList.add('hidden');
-
-                        let count = card.querySelector('.count');
-                        count.classList.add('hidden')
-
-                    })
                 })
 
             })
@@ -3103,137 +3215,135 @@ class ViewManager {
 
     }
 
-    /**
-     * List View
-     * This currently is not working. use get_view for now
-     */
-    listView() {
+    // /**
+    //  * List View
+    //  * This currently is not working. use get_view for now
+    //  */
+    // listView() {
 
-        // console.log('running list view')
+    //     // console.log('running list view')
 
-        let tabs_content = document.querySelectorAll('.tab-content');
-        // console.log(tabs_content)
-        tabs_content.forEach(tab_content => {
+    //     let tabs_content = document.querySelectorAll('.tab-content');
+    //     // console.log(tabs_content)
+    //     tabs_content.forEach(tab_content => {
 
-            let header_row = tab_content.querySelector('.header_row');
-            if (header_row) {
-                header_row.classList.remove('hidden');
-            }
+    //         let header_row = tab_content.querySelector('.header_row');
+    //         if (header_row) {
+    //             header_row.classList.remove('hidden');
+    //         }
 
-            let grids = ['.folder_grid', '.file_grid', '.hidden_folder_grid', '.hidden_file_grid'];
-            grids.forEach(grid => {
+    //         let grids = ['.folder_grid', '.file_grid', '.hidden_folder_grid', '.hidden_file_grid'];
+    //         grids.forEach(grid => {
 
-                // console.log(grid)
+    //             // console.log(grid)
 
-                let grid_views = document.querySelectorAll(grid);
-                grid_views.forEach(grid_view => {
+    //             let grid_views = document.querySelectorAll(grid);
+    //             grid_views.forEach(grid_view => {
 
-                    grid_view.classList.remove('grid');
-                    grid_view.classList.add('grid1');
+    //                 // grid_view.classList.remove('grid');
+    //                 // grid_view.classList.add('grid1');
 
-                    let cards = grid_view.querySelectorAll('.card');
-                    cards.forEach(card => {
-                        card.classList.add('list');
+    //                 let cards = grid_view.querySelectorAll('.card');
+    //                 cards.forEach(card => {
+    //                     card.classList.add('list');
 
-                        let content = card.querySelector('.content');
-                        content.classList.add('list');
+    //                     let content = card.querySelector('.content');
+    //                     content.classList.add('list');
 
-                        let item = content.querySelector('.item');
-                        item.classList.remove('header');
-                        item.classList.add('list', 'list_header');
+    //                     let item = content.querySelector('.item');
+    //                     item.classList.remove('header');
+    //                     item.classList.add('list', 'list_header');
 
-                        let icon_div = card.querySelector('.icon_div');
-                        icon_div.remove();
-                        item.prepend(icon_div);
+    //                     let icon_div = card.querySelector('.icon_div');
+    //                     icon_div.remove();
+    //                     item.prepend(icon_div);
 
-                        let href = card.querySelector('a');
+    //                     let href = card.querySelector('a');
 
-                        let header = card.querySelector('.header');
-                        if (!header) {
-                            header = add_div(['header', 'item']);
-                        }
-                        header.append(href);
-                        item.append(header);
+    //                     let header = card.querySelector('.header');
+    //                     if (!header) {
+    //                         header = add_div(['header', 'item']);
+    //                     }
+    //                     header.append(href);
+    //                     item.append(header);
 
-                        // Handle column headers for list view
-                        for (const key in settings.Captions) {
-                            if (settings.Captions[key]) {
-                                if (key === 'Location') {
-                                    let path = card.querySelector('.path');
-                                    path.classList.remove('hidden');
-                                }
-                                if (key === 'Modified') {
-                                    let mtime = card.querySelector('.mtime');
-                                    mtime.classList.remove('hidden');
-                                }
-                                if (key === 'Created') {
-                                    let ctime = card.querySelector('.ctime');
-                                    ctime.classList.remove('hidden');
-                                }
-                                if (key === 'Accessed') {
-                                    let atime = card.querySelector('.atime');
-                                    atime.classList.remove('hidden');
-                                }
-                                if (key === 'Type') {
-                                    let type = card.querySelector('.type');
-                                    type.classList.remove('hidden');
-                                }
-                                if (key === 'Size') {
-                                    let size = card.querySelector('.size');
-                                    size.classList.remove('hidden');
-                                }
-                                if (key === 'Count') {
-                                    let count = card.querySelector('.count');
-                                    count.classList.remove('hidden');
-                                }
+    //                     // Handle column headers for list view
+    //                     for (const key in settings.Captions) {
+    //                         if (settings.Captions[key]) {
+    //                             if (key === 'Location') {
+    //                                 let path = card.querySelector('.path');
+    //                                 path.classList.remove('hidden');
+    //                             }
+    //                             if (key === 'Modified') {
+    //                                 let mtime = card.querySelector('.mtime');
+    //                                 mtime.classList.remove('hidden');
+    //                             }
+    //                             if (key === 'Created') {
+    //                                 let ctime = card.querySelector('.ctime');
+    //                                 ctime.classList.remove('hidden');
+    //                             }
+    //                             if (key === 'Accessed') {
+    //                                 let atime = card.querySelector('.atime');
+    //                                 atime.classList.remove('hidden');
+    //                             }
+    //                             if (key === 'Type') {
+    //                                 let type = card.querySelector('.type');
+    //                                 type.classList.remove('hidden');
+    //                             }
+    //                             if (key === 'Size') {
+    //                                 let size = card.querySelector('.size');
+    //                                 size.classList.remove('hidden');
+    //                             }
+    //                             if (key === 'Count') {
+    //                                 let count = card.querySelector('.count');
+    //                                 count.classList.remove('hidden');
+    //                             }
 
-                            } else {
-                                if (key === 'Location') {
-                                    let path = card.querySelector('.path');
-                                    path.classList.add('hidden');
-                                }
-                                if (key === 'Modified') {
-                                    let mtime = card.querySelector('.mtime');
-                                    mtime.classList.add('hidden');
-                                }
-                                if (key === 'Created') {
-                                    let ctime = card.querySelector('.ctime');
-                                    ctime.classList.add('hidden');
-                                }
-                                if (key === 'Accessed') {
-                                    let atime = card.querySelector('.atime');
-                                    atime.classList.add('hidden');
-                                }
-                                if (key === 'Type') {
-                                    let type = card.querySelector('.type');
-                                    type.classList.add('hidden');
-                                }
-                                if (key === 'Size') {
-                                    let size = card.querySelector('.size');
-                                    size.classList.add('hidden');
-                                }
-                                if (key === 'Count') {
-                                    let count = card.querySelector('.count');
-                                    count.classList.add('hidden');
-                                }
-                                // console.log(key);
-                            }
-                        }
+    //                         } else {
+    //                             if (key === 'Location') {
+    //                                 let path = card.querySelector('.path');
+    //                                 path.classList.add('hidden');
+    //                             }
+    //                             if (key === 'Modified') {
+    //                                 let mtime = card.querySelector('.mtime');
+    //                                 mtime.classList.add('hidden');
+    //                             }
+    //                             if (key === 'Created') {
+    //                                 let ctime = card.querySelector('.ctime');
+    //                                 ctime.classList.add('hidden');
+    //                             }
+    //                             if (key === 'Accessed') {
+    //                                 let atime = card.querySelector('.atime');
+    //                                 atime.classList.add('hidden');
+    //                             }
+    //                             if (key === 'Type') {
+    //                                 let type = card.querySelector('.type');
+    //                                 type.classList.add('hidden');
+    //                             }
+    //                             if (key === 'Size') {
+    //                                 let size = card.querySelector('.size');
+    //                                 size.classList.add('hidden');
+    //                             }
+    //                             if (key === 'Count') {
+    //                                 let count = card.querySelector('.count');
+    //                                 count.classList.add('hidden');
+    //                             }
+    //                             // console.log(key);
+    //                         }
+    //                     }
 
-                    })
+    //                 })
 
-                })
+    //             })
 
-            })
+    //         })
 
+    //     })
 
+    //     let icon_size = iconManager.getIconSize();
+    //     iconManager.resizeIcons(icon_size);
 
-        })
-
-        let icon_size = iconManager.getIconSize();
-        iconManager.resizeIcons(icon_size);
-
-    }
+    // }
 
     // Lazy load images
     lazyload() {
@@ -3305,8 +3415,11 @@ class ViewManager {
 
         dirents_arr.forEach(arr => {
 
-            const sort = localStorage.getItem('sort');
+            // const sort = localStorage.getItem('sort');
             // console.log(sort);
+
+            let sort = `${settings.Sort["by"]}_${settings.Sort["order"]}`;
+
             switch (sort) {
                 case 'name_asc': {
                     arr.sort((a, b) => {
@@ -3346,10 +3459,68 @@ class ViewManager {
 
                     break;
                 }
-                case 'size': {
+                case 'created_desc': {
+                    arr.sort((a, b) => {
+                        // console.log(a,b)
+                        return b.ctime - a.ctime
+                    })
+                    break;
+                }
+                case 'created_asc': {
+                    arr.sort((a, b) => {
+                        return a.ctime - b.ctime
+                    })
+
+                    break;
+                }
+                case 'accessed_desc': {
+                    arr.sort((a, b) => {
+                        // console.log(a,b)
+                        return b.atime - a.atime
+                    })
+                    break;
+                }
+                case 'accessed_asc': {
+                    arr.sort((a, b) => {
+                        return a.atime - b.atime
+                    })
+                    break;
+                }
+                case 'size_desc': {
                     arr.sort((a, b) => {
                         return b.size - a.size
                     })
+                    break;
+                }
+                case 'size_asc': {
+                    arr.sort((a, b) => {
+                        return a.size - b.size
+                    })
+                    break;
+                }
+                case 'type_desc': {
+                    arr.sort((a, b) => {
+                        if (b.content_type.toLocaleLowerCase() < a.content_type.toLocaleLowerCase()) {
+                            return -1;
+                        }
+                        if (b.content_type.toLocaleLowerCase() > a.content_type.toLocaleLowerCase()) {
+                            return 1;
+                        }
+                        return 0;
+                    })
+                    break;
+                }
+                case 'type_asc': {
+                    arr.sort((a, b) => {
+                        if (a.content_type.toLocaleLowerCase() < b.content_type.toLocaleLowerCase()) {
+                            return -1;
+                        }
+                        if (a.content_type.toLocaleLowerCase() > b.content_type.toLocaleLowerCase()) {
+                            return 1;
+                        }
+                        return 0;
+                    })
+                    break;
                     break;
                 }
             }
@@ -3490,6 +3661,7 @@ class FileOperations {
                 }
             })
 
+            // highlight sidebar item for matching directory
             let sidebar = document.querySelector('.sidebar');
             let sidebar_items = sidebar.querySelectorAll('.item');
             sidebar_items.forEach(item => {
@@ -3535,204 +3707,17 @@ class FileOperations {
             let location = document.querySelector('.location');
             let slider = document.querySelector('.slider');
 
-            let folder_grid = active_tab_content.querySelector('.folder_grid');
-            if (!folder_grid) {
-                folder_grid = add_div()
-                folder_grid.classList.add('folder_grid')
-                folder_grid.id = 'folder_grid'
-            }
-            let file_grid = active_tab_content.querySelector('.file_grid');
-            if (!file_grid) {
-                file_grid = add_div()
-                file_grid.classList.add('file_grid')
-                file_grid.id = 'file_grid'
-            }
-
-            let hidden_folder_grid = active_tab_content.querySelector('.hidden_folder_grid');
-            if (!hidden_folder_grid) {
-                hidden_folder_grid = add_div(['hidden_folder_grid']);
-                hidden_folder_grid.id = 'hidden_folder_grid';
-            }
-
-            let hidden_file_grid = active_tab_content.querySelector('.hidden_file_grid');
-            if (!hidden_file_grid) {
-                hidden_file_grid = add_div(['hidden_file_grid']);
-                hidden_file_grid.id = 'hidden_file_grid';
-            }
-
-            if (localStorage.getItem('show_hidden') !== null) {
-                let show_hidden_icon = document.querySelector('.show_hidden')
-                let show_hidden = parseInt(localStorage.getItem('show_hidden'));
-                if (show_hidden) {
-                    hidden_folder_grid.classList.remove('hidden');
-                    hidden_file_grid.classList.remove('hidden');
-                    show_hidden_icon.classList.add('active')
-                } else {
-                    hidden_folder_grid.classList.add('hidden');
-                    hidden_file_grid.classList.add('hidden');
-                    show_hidden_icon.classList.remove('active')
-                }
-            }
-
-            let grid_view = document.querySelector('.grid_view');
-            let list_view = document.querySelector('.list_view');
-
-            folder_grid.classList.add('folder_grid');
-            file_grid.classList.add('file_grid');
-            hidden_folder_grid.classList.add('hidden_folder_grid');
-            hidden_file_grid.classList.add('hidden_file_grid');
-
-
-            file_grid.draggable = false;
-            hidden_file_grid.draggable = false;
-            folder_grid.draggable = false;
-            hidden_folder_grid.draggable = false;
-
             location.value = source;
             document.title = display_name;
 
-            // let header = active_tab_content.querySelector('.header_row')
-            // if (!header) {
-            //     header = add_div();
-            //     header.classList.add('header_row', 'content', 'list', 'sticky');
-            //     header.addEventListener('contextmenu', (e) => {
-            //         e.preventDefault();
-            //         e.stopPropagation()
-            //         ipcRenderer.send('columns_menu')
-            //     })
-            //     let colNames = [];
-            //     let colClasses = [];
-
-            //     for (const key in settings.Captions) {
-            //         if (settings.Captions[key] === true) {
-            //             colNames.push(key)
-            //             colClasses.push(key.toLowerCase());
-            //         }
-            //     }
-
-            //     // let colNames = ['Name', 'Modified', 'Size', 'Items'];
-            //     // let colClasses = ['name', 'date', 'size', 'items'];
-            //     let sort_by = '_desc'
-            //     let headerRow = colNames.map((colName, index) => {
-
-            //         let col = add_div();
-            //         col.classList.add('item', colClasses[index]);
-            //         col.append(colName);
-            //         col.addEventListener('click', (e) => {
-
-            //             sort = colName.toLocaleLowerCase();
-            //             if (sort === 'name' || sort === 'modified' || sort === 'created' || sort === 'accessed') {
-            //                 if (sort_by === '_desc') {
-            //                     sort_by = '_asc'
-            //                 } else if (sort_by === '_asc') {
-            //                     sort_by = '_desc'
-            //                 }
-            //                 localStorage.setItem('sort', `${sort}${sort_by}`);
-            //             }
-
-            //             if (sort === 'size' || sort === 'items') {
-            //                 localStorage.setItem('sort', `${sort}`)
-            //             }
-
-            //             sort_cards();
-
-            //         })
-
-            //         return col;
-            //     });
-            //     header.append(...headerRow);
-            //     active_tab_content.append(header)
-
-            // }
 
             if (view == 'list') {
 
                 viewManager.getListView()
 
-                // // viewManager.listView(dirents)
-                // header.classList.remove('hidden');
-
-                // const list_view_columns = add_div();
-                // list_view_columns.className = 'list_view_columns';
-                // list_view_columns.innerHTML = '';
-
-                // list_view.classList.add('active');
-                // grid_view.classList.remove('active');
-
-                // [folder_grid, file_grid, hidden_folder_grid, hidden_file_grid].forEach((element) => {
-                //     element.classList.remove('grid');
-                //     element.classList.add('grid1');
-                // });
-
             } else if (view === 'grid') {
 
-                active_tab_content.innerHTML = '';
-
-                // header.classList.add('hidden');
-
-                list_view.classList.remove('active');
-                grid_view.classList.add('active');
-
-                [folder_grid, file_grid, hidden_folder_grid, hidden_file_grid].forEach((element) => {
-                    element.classList.remove('grid1');
-                    element.classList.add('grid');
-                });
-
-            }
-
-            folder_grid.innerHTML = '';
-            file_grid.innerHTML = '';
-
-            hidden_folder_grid.innerHTML = '';
-            hidden_file_grid.innerHTML = '';
-
-            if (localStorage.getItem('sort') === null) {
-                sort = 'date';
-            } else {
-                sort = localStorage.getItem('sort');
-            }
-
-            // Loop Files Array
-            for (let i = 0; i < dirents.length; i++) {
-
-                let file = dirents[i];
-                let card = utilities.getCard(file);
-
-                // let card = getCardGio(file);
-                // console.log(file);
-
-                if (file.is_dir || file.content_type === 'inode/symlink') {
-
-                    if (file.is_hidden) {
-                        hidden_folder_grid.append(card);
-                    } else {
-                        folder_grid.append(card);
-                    }
-
-                    // this is slowing the load time down dont use for now
-                    if (file.href.indexOf('mtp:') > -1) {
-
-                    } else {
-                        // Call Get Folder Size
-                        // getFolderSize(file.href);
-                        getFolderCount(file.href);
-                    }
-
-                    auto_complete_arr.push(file.href);
-
-                } else {
-
-                    if (file.is_hidden) {
-                        hidden_file_grid.append(card);
-                    } else {
-                        file_grid.append(card);
-                    }
-
-                }
-
-                if (!file.is_writable) {
-                    card.classList.add('not-writable')
-                }
+                viewManager.getGridView()
 
             }
 
@@ -3764,28 +3749,6 @@ class FileOperations {
                 // document.removeEventListener('keyup', quickSearch)
             })
 
-            // let nav_idx = 0;
-            // main.addEventListener('keydown', (e) => {
-
-            //     // console.log(e.key)
-            //     let cards = active_tab_content.querySelectorAll('.card');
-            //     if (e.key === 'ArrowDown') {
-            //         nav_idx = (nav_idx + 4) % cards.length;
-            //         for (let i = 0; i < cards.length; i++) {
-            //             if (i === nav_idx) {
-            //                 cards[i].classList.add('highlight_select');
-            //             } else {
-            //                 cards[i].classList.remove('highlight_select');
-            //             }
-            //         }
-            //     }
-            // })
-
-            // if (view === 'grid') {
-                active_tab_content.append(folder_grid, hidden_folder_grid, file_grid, hidden_file_grid);
-                main.append(active_tab_content)
-            // }
-
             // Set Icon Size
             let icon_size = "";
             if (view === 'grid') {
@@ -3796,23 +3759,21 @@ class FileOperations {
             iconManager.resizeIcons(icon_size);
             slider.value = icon_size;
 
-            viewManager.lazyload();
-            sort_cards();
+            // viewManager.lazyload();
+            // sort_cards();
 
             // clearHighlight();
             // main.classList.remove('loader');
 
             // Drag Select for cards
             utilities.dragSelect();
-            utilities.getFolderSizes();
-
+            // utilities.getFolderSizes();
             viewManager.resize();
 
             // get number of cards in each div for keyboard navigation
             navigation.getCardCount();
             navigation.getCardGroups();
 
-            // console.log('time', (new Date().getTime() - st));
             hide_loader();
             clear();
 
@@ -3927,6 +3888,7 @@ class FileOperations {
 
             header_link.classList.add('hidden');
             input.classList.remove('hidden');
+
 
             input.select();
             ipcRenderer.invoke('path:extname', href).then(extname => {
@@ -4671,8 +4633,17 @@ ipcRenderer.on('search_results', (e, find_arr) => {
 
 // Sort Views
 ipcRenderer.on('sort_cards', (e, sort_by) => {
-    localStorage.setItem('sort', sort_by);
+
+    // localStorage.setItem('sort', sort_by);
+
+    // update settings
+    let sort = split = sort_by.split('_');
+    settings.Sort.by = sort[0];
+    settings.Sort.order = sort[1];
+    ipcRenderer.send('save_settings', settings);
     sort_cards();
+
+
 })
 
 // On Recent Files
@@ -4682,18 +4653,20 @@ ipcRenderer.on('recent_files', (e, dirents) => {
 
 // Get Folder Size
 ipcRenderer.on('folder_size', (e, source, folder_size) => {
-    // console.log('setting folder size', folder_size)
+    console.log('setting folder size', folder_size)
     let tab_content = document.querySelector('.active-tab-content');
-    let folders = tab_content.querySelector('.folder_grid, .hidden_folder_grid');
+    let folders = tab_content.querySelector('.folder_grid, .hidden_folder_grid, .list_view');
     if (folders) {
         let card = folders.querySelector(`[data-href="${source}"]`)
         if (card !== null) {
             card.dataset.size = folder_size;
             let size = card.querySelector('.size')
+            if (size) {
+                size.innerHTML = ''
+                size.innerHTML = getFileSize(folder_size);
+                localStorage.setItem(source, folder_size);
+            }
             card = null;
-            size.innerHTML = ''
-            size.innerHTML = getFileSize(folder_size);
-            localStorage.setItem(source, folder_size);
         }
 
     // Side menu properties
@@ -4701,9 +4674,11 @@ ipcRenderer.on('folder_size', (e, source, folder_size) => {
         if (source !== 'File System' || source !== 'Recent') {
             let card = tab_content.querySelector(`[data-properties_href="${source}"]`);
             let size = card.querySelector('.size')
+            if (size) {
+                size.innerHTML = ''
+                size.innerHTML = getFileSize(folder_size);
+            }
             card = null;
-            size.innerHTML = ''
-            size.innerHTML = getFileSize(folder_size);
         }
     }
 
@@ -4810,8 +4785,10 @@ ipcRenderer.on('count', (e, source, item_count) => {
     let card = active_tab_content.querySelector(`[data-href="${source}"]`);
     if (card) {
         let count = card.querySelector('.count');
-        count.innerHTML = '';
-        count.innerHTML = `${item_count} Items`;
+        if (count) {
+            count.innerHTML = '';
+            count.innerHTML = `${item_count} Items`;
+        }
     }
 })
 
@@ -5438,9 +5415,17 @@ async function get_disk_summary_view(callback) {
 function sort_cards() {
 
     let sort = '';
-    if (localStorage.getItem('sort') !== null) {
-        sort = localStorage.getItem('sort');
+    // if (localStorage.getItem('sort') !== null) {
+    //     sort = localStorage.getItem('sort');
+    // }
+
+    if (settings.Sort !== null) {
+        sort = `${settings.Sort['by']}_${settings.Sort['order']}`;
+    } else {
+        msg('Error getting sort order from settings');
+        return;
     }
+
     ipcRenderer.send('sort', sort);
 
     let active_tab_content = document.querySelector('.active-tab-content')
