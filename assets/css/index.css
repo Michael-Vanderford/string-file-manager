@@ -146,7 +146,7 @@ body {
 
 
 .list_view {
-
+    user-select: none;
 }
 
 .list_view table {
@@ -167,18 +167,20 @@ body {
     cursor: pointer;
 }
 
-.list_view tr:hover {
-    background: var(--highlight);
-    border-radius: 5px;
+.list_view tr {
+    /* height: 40px; */
+}
+
+/* Empty row to add spacing on highlight */
+.list_view .tr1 {
+    height: 5px;
 }
 
 .list_view td {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    /* max-width: 25px; */
-    padding:2px;
-    border: 0;
+    padding: 5px;
 }
 
 .list_view td:first-child {
@@ -196,7 +198,6 @@ body {
 }
 
 .list_view .name {
-    /* border: 1px solid var(--border); */
     align-items: center;
 }
 
@@ -231,11 +232,11 @@ body {
 }
 
 .list_view th.size {
-    width: 50px;
+    width: 60px;
 }
 
 .list_view th.count {
-    width: 50px;
+    width: 60px;
 }
 
 .list_view td {
@@ -1470,8 +1471,8 @@ input[type=text]:focus {
         --svg: rgba(155, 155, 155, .9);
 
         --link: #4183c4;
-        --highlight: #364864;
-        --highlight-select: #364864;
+        --highlight: #233246;
+        --highlight-select: #233246;
 
         --not-writable: #cfcfcf;
 
@@ -1561,8 +1562,10 @@ input[type=text]:focus {
         --progress: #f7f7f7;
 
         --link: #4183c4;
-        --highlight: rgba(0, 0, 0, 0.1);
-        --highlight-select: rgba(0, 0, 0, 0.1);
+        /* --highlight: rgba(0, 0, 0, 0.1); */
+        /* --highlight-select: rgba(0, 0, 0, 0.1); */
+        --highlight: #e1edfb;
+        --highlight-select: #e1edfb;
 
         --black: #000000;
         --white: #FFFFFF;

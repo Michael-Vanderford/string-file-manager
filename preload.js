@@ -873,8 +873,10 @@ class Utilities {
         let endPosX = 0;
         let endPosY = 0;
 
-        const cards = document.querySelectorAll('.card');
         const active_tab_content = document.querySelector('.active-tab-content');
+        const cards = active_tab_content.querySelectorAll('.card, .tr');
+
+        // console.log('cards', cards)
         // const tab_content = document.querySelector('.tab-content');
 
         active_tab_content.addEventListener('mousedown', (e) => {
@@ -998,7 +1000,6 @@ class Utilities {
         // Focus first card
         // let href = cards[0].querySelector('.header a');
         // href.focus();
-
 
 
     }
@@ -1196,6 +1197,13 @@ class Utilities {
                 })
             })
         })
+
+        let trs = document.querySelectorAll('.tr.folder');
+        trs.forEach(tr => {
+            let href = tr.dataset.href;
+            ipcRenderer.send('get_folder_size', href);
+        })
+
     }
 
     /**
@@ -2798,6 +2806,58 @@ class ViewManager {
 
     }
 
+    // get mapped columns
+    getMappedColumns() {
+
+        // column headers array
+        const columnHeaders = Object.keys(settings.Captions).filter(
+            (caption) => settings.Captions[caption] === true
+        );
+
+        let mapped_columns = {};
+        columnHeaders.forEach((property) => {
+            let mapped_property = '';
+            switch (property) {
+                case 'Name': {
+                    mapped_property = 'display_name';
+                    break;
+                }
+                case 'Location': {
+                    mapped_property = 'location';
+                    break;
+                }
+                case 'Modified': {
+                    mapped_property = 'mtime';
+                    break;
+                }
+                case 'Created': {
+                    mapped_property = 'ctime';
+                    break;
+                }
+                case 'Accessed': {
+                    mapped_property = 'atime';
+                    break;
+                }
+                case 'Type': {
+                    mapped_property = 'content_type';
+                    break;
+                }
+                case 'Size': {
+                    mapped_property = 'size';
+                    break;
+                }
+                case 'Count': {
+                    mapped_property = 'count';
+                    break;
+                }
+            }
+            mapped_columns[property] = mapped_property;
+        })
+
+        return mapped_columns;
+
+    }
+
     // Get View
     getView(dir, tab = 0) {
 
@@ -2943,6 +3003,7 @@ class ViewManager {
 
     }
 
+    // get list view
     getListView () {
 
         // when switching view the data needs to be loaded for both views
@@ -2979,7 +3040,7 @@ class ViewManager {
             );
 
             // check if th exists
-            let th = document.querySelector("thead");
+            let th = active_tab_content.querySelector("thead");
             if (!th) {
 
                 // add div to hold data
@@ -2988,8 +3049,6 @@ class ViewManager {
 
                 // load table
                 active_tab_content.append(list_container);
-
-                let sort_by = settings.Sort.by;
                 let sort_order = settings.Sort.order;
 
                 // get header rows
@@ -3014,57 +3073,24 @@ class ViewManager {
 
                     });
 
+                    th.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        ipcRenderer.send('columns_menu', header);
+                    })
+
                 });
 
                 // add header
-                document.querySelector("thead").appendChild(headerRow);
+                active_tab_content.querySelector("thead").appendChild(headerRow);
 
             }
 
             const tbody = active_tab_content.querySelector(".table_body");
             tbody.innerHTML = '';
 
-
             // map columns
-            let mapped_columns = {};
-            columnHeaders.forEach((property) => {
-                let mapped_property = '';
-                switch (property) {
-                    case 'Name': {
-                        mapped_property = 'display_name';
-                        break;
-                    }
-                    case 'Location': {
-                        mapped_property = 'location';
-                        break;
-                    }
-                    case 'Modified': {
-                        mapped_property = 'mtime';
-                        break;
-                    }
-                    case 'Created': {
-                        mapped_property = 'ctime';
-                        break;
-                    }
-                    case 'Accessed': {
-                        mapped_property = 'atime';
-                        break;
-                    }
-                    case 'Type': {
-                        mapped_property = 'content_type';
-                        break;
-                    }
-                    case 'Size': {
-                        mapped_property = 'size';
-                        break;
-                    }
-                    case 'Count': {
-                        mapped_property = 'count';
-                        break;
-                    }
-                }
-                mapped_columns[property] = mapped_property;
-            })
+            let mapped_columns = this.getMappedColumns();
 
             // filter hidden files
             const show_hidden = localStorage.getItem('show_hidden');
@@ -3098,6 +3124,7 @@ class ViewManager {
 
                 let input = document.createElement('input');
                 const tr = document.createElement("tr");
+                const tr1 = document.createElement("tr");
 
                 input.type = 'text';
                 input.classList.add('hidden','input');
@@ -3106,6 +3133,13 @@ class ViewManager {
                 // check if directory
                 let is_dir = rowData['is_dir'];
                 tr.dataset.href = href;
+                tr.dataset.type = file.content_type
+                tr.classList.add('tr');
+                tr1.classList.add('tr1');
+
+                link.draggable = false;
+                input.draggable = false;
+                tr.draggable = true;
 
                 columnHeaders.forEach((property) => {
 
@@ -3143,6 +3177,16 @@ class ViewManager {
 
                 });
 
+                tbody.appendChild(tr);
+                tbody.appendChild(tr1);
+
+                if (is_dir) {
+                    getFolderCount(href);
+                    tr.classList.add('folder');
+                }
+
+                // event listeners //////////////////
+
                 // highlight for edit mode
                 tr.addEventListener('mouseenter', (e) => {
                     tr.classList.add('highlight');
@@ -3151,6 +3195,52 @@ class ViewManager {
                 tr.addEventListener('mouseleave', (e) => {
                     tr.classList.remove('highlight');
                 })
+
+                tr.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    tr.classList.toggle('highlight_select')
+                })
+
+                tr.addEventListener('contextmenu', (e) => {
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    tr.classList.add('highlight_select');
+
+                    if (is_dir && tr.dataset.href !== e.target.dataset.href){
+                        ipcRenderer.send('folder_menu', file);
+                    } else {
+                        ipcRenderer.send('file_menu', file);
+                    }
+
+                });
+
+                tr.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (is_dir) {
+                        tr.classList.add('highlight_target');
+                    }
+                });
+
+                tr.addEventListener('dragleave', (e) => {
+                    tr.classList.remove('highlight_target');
+                });
+
+                tr.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    ipcRenderer.send('main', 0);
+                    if (!tr.classList.contains('highlight') && tr.classList.contains('highlight_target')) {
+                        if (e.ctrlKey) {
+                            fileOperations.paste(file.href);
+                        } else {
+                            fileOperations.move(file.href);
+                        }
+                    } else {
+                        // console.log('did not find target')
+                    }
+
+                });
 
                 // add event listener to link
                 link.addEventListener('click', (e) => {
@@ -3162,15 +3252,20 @@ class ViewManager {
                     }
                 })
 
-                tbody.appendChild(tr);
+                input.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                })
+
 
             });
 
             let icon_size = iconManager.getIconSize();
             iconManager.resizeIcons(icon_size);
 
-            getFolderCount();
+            utilities.getFolderSizes();
+
             this.lazyload();
+            utilities.dragSelect();
 
         }).catch(err => {
             console.log(err)
@@ -3874,7 +3969,7 @@ class FileOperations {
 
     // Edit Mode
     edit() {
-        // console.log('running edit');
+        console.log('running edit');
         let main = document.querySelector('.main');
         let active_tab_content = document.querySelector('.active-tab-content');
         let cards = Array.from(active_tab_content.querySelectorAll('.highlight, .highlight_select'));
@@ -4900,49 +4995,80 @@ ipcRenderer.on('confirm_delete', (e, delete_arr) => {
 ipcRenderer.on('get_card_gio', (e, file) => {
 
     console.log('running get card gio');
-
     let active_tab_content = document.querySelector('.active-tab-content');
-    let folder_grid = active_tab_content.querySelector('.folder_grid');
-    let file_grid = active_tab_content.querySelector('.file_grid');
-    let empty_msg = document.querySelector('.empty_msg');
-
-    if (empty_msg) {
-        empty_msg.classList.add('hidden');
-    }
-
-    // Check if card already exists
     let exists = 0;
-    let cards = active_tab_content.querySelectorAll('.card')
-    cards.forEach(card => {
-        if (card.dataset.href === file.href) {
-            exists = 1;
-            return;
+
+    if (view === 'grid') {
+
+        console.log('running list view', file.href);
+
+        let folder_grid = active_tab_content.querySelector('.folder_grid');
+        let file_grid = active_tab_content.querySelector('.file_grid');
+        let empty_msg = document.querySelector('.empty_msg');
+
+        if (empty_msg) {
+            empty_msg.classList.add('hidden');
         }
-    })
 
-    if (!exists) {
-        let card = utilities.getCard(file); //getCardGio(file);
-        if (file.is_dir) {
+        // Check if card already exists
+        let cards = active_tab_content.querySelectorAll('.card')
+        cards.forEach(card => {
+            if (card.dataset.href === file.href) {
+                exists = 1;
+                return;
+            }
+        })
 
-            folder_grid.prepend(card);
-            getFolderCount(file.href);
-            utilities.getFolderSize(file.href);
+        if (!exists) {
+            let card = utilities.getCard(file); //getCardGio(file);
+            if (file.is_dir) {
 
+                folder_grid.prepend(card);
+                getFolderCount(file.href);
+                utilities.getFolderSize(file.href);
+
+            } else {
+                console.log('adding file');
+                file_grid.prepend(card);
+            }
+            // viewManager.lazyload();
         } else {
-            console.log('adding file');
-            file_grid.prepend(card);
+            let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
+            let size = card.querySelector('.size');
+            size.innerHTML = '';
+
+            if (file.is_dir) {
+                getFolderCount(file.href);
+                utilities.getFolderSize(file.href);
+            } else {
+                size.innerHTML = getFileSize(file.size);
+            }
+
         }
-        // viewManager.lazyload();
-    } else {
-        let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
-        let size = card.querySelector('.size');
-        size.innerHTML = '';
 
-        if (file.is_dir) {
-            getFolderCount(file.href);
-            utilities.getFolderSize(file.href);
-        } else {
-            size.innerHTML = getFileSize(file.size);
+    } else if (view === 'list') {
+
+        console.log('running list view', file.href);
+
+        let tbody = active_tab_content.querySelector('.table_body');
+        if (tbody) {
+
+            let tr = document.createElement('tr');
+            tr.classList.add('tr');
+            tr.dataset.href = file.href;
+
+            const mappedColumns = viewManager.getMappedColumns();
+            console.log(mappedColumns);
+            for (let column in mappedColumns) {
+                console.log(mappedColumns[column]);
+                let td = document.createElement('td');
+                td.textContent = file[mappedColumns[column]];
+                tr.append(td);
+            }
+
+            tbody.prepend(tr);
+
+
         }
 
     }
@@ -4973,7 +5099,7 @@ ipcRenderer.on('get_card', (e, file) => {
 
 // Remove Card
 ipcRenderer.on('remove_card', (e, href) => {
-    let cards = document.querySelectorAll('.card')
+    let cards = document.querySelectorAll('.card, .tr')
     cards.forEach(card => {
         if (card.dataset.href === href) {
             card.remove();
