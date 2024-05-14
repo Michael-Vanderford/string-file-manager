@@ -827,13 +827,16 @@ th {
 .list .item:nth-child(1) {
     /* background-color: red; */
     /* min-width: 350px; */
-    min-width: 40%;
+    min-width: 30%;
 }
 
 .list .item {
     flex-grow: 1;
     /* border: 1px solid var(--border); */
     width: 15%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .list .item.size {
