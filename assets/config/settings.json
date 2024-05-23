@@ -12,6 +12,9 @@
         "Size": true,
         "Count": true
     },
+    "Hidden Files": {
+        "show": false
+    },
     "File Menu": {
         "show": false
     },

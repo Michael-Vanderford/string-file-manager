@@ -724,7 +724,8 @@ class Utilities {
 
                 location.value = file.href;
                 if (e.ctrlKey) {
-                    ipcRenderer.send('get_files', file.href, 1);
+                    // ipcRenderer.send('get_files', file.href, 1);
+                    this.getFiles(file.href, 1);
                 } else {
                     location.dispatchEvent(new Event('change'));
                 }
@@ -746,7 +747,8 @@ class Utilities {
 
                 location.value = file.href;
                 if (e.ctrlKey) {
-                    ipcRenderer.send('get_files', file.href, 1);
+                    // ipcRenderer.send('get_files', file.href, 1);
+                    this.getFiles(file.href, 1);
                 } else {
                     location.dispatchEvent(new Event('change'));
                 }
@@ -1156,6 +1158,8 @@ class Utilities {
      */
     msg(message, has_timeout = 1) {
 
+        // console.log(message)
+
         // let content = document.querySelector('.tab-content');
         let msg = document.querySelector('.msg');
         msg.innerHTML = '';
@@ -1180,6 +1184,24 @@ class Utilities {
             clearTimeout(this.msg_timeout_id);
         }
 
+    }
+
+    // show empty folder message
+    showEmptyFolderMsg() {
+        let active_tab_content = document.querySelector('.active-tab-content');
+        active_tab_content.innerHTML = '';
+        let empty_msg = add_div(['empty_msg']);
+        empty_msg.innerHTML = 'Folder is Empty';
+        active_tab_content.append(empty_msg);
+    }
+
+    // remove empty folder message
+    removeEmptyFolderMsg() {
+        let active_tab_content = document.querySelector('.active-tab-content');
+        let empty_msg = active_tab_content.querySelector('.empty_msg');
+        if (empty_msg) {
+            empty_msg.remove();
+        }
     }
 
     /**
@@ -1351,6 +1373,8 @@ class Navigation {
 
             e.stopPropagation();
 
+            let active_tab_content = document.querySelector('.active-tab-content');
+
             if (document.activeElement.tagName.toLowerCase() !== 'input') {
 
                 if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
@@ -1365,7 +1389,8 @@ class Navigation {
                     if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
                         is_quick_search = 1;
                         this.quick_search_sting += e.key;
-                        let cards = document.querySelectorAll('.card')
+                        let cards = active_tab_content.querySelectorAll('.card, .tr');
+                        console.log('cards', cards)
                         cards.forEach((card) => {
 
                             // if (card.dataset.href.toLocaleLowerCase().indexOf(this.quick_search_sting) > -1) {
@@ -1373,7 +1398,7 @@ class Navigation {
                                 card.classList.add('highlight_select');
 
                                 if (c === 0) {
-                                    let active_href = card.querySelector('.header a');
+                                    let active_href = card.querySelector('.header a, .display_name a');
                                     active_href.focus();
                                 }
                                 ++c
@@ -2501,7 +2526,7 @@ class TabManager {
             location: href
         }
 
-        console.log('tab history', history_obj)
+        // console.log('tab history', history_obj)
 
         // reset tab history idx when the history changes
         this.tab_history_idx = 0;
@@ -2719,6 +2744,25 @@ class ViewManager {
         // this.utils = new Utilities();
         this.view = localStorage.getItem('view');
 
+        // retain previous href
+        this.source0 = '';
+
+        this.idx = -1;
+
+        this.chunk_size = 20;
+        this.chunk_idx = 0;
+
+        // Update list view on column change
+        ipcRenderer.on('get_list_view', (e) => {
+            let active_tab_content = document.querySelector('.active-tab-content');
+            let table = active_tab_content.querySelector("table");
+            table.remove();
+            settingsManager.getSettings(updated_settings => {
+                settings = updated_settings;
+                this.getListView();
+            })
+        })
+
         // Switch View Listener
         ipcRenderer.on('switch_view', (e, view) => {
             this.view = view
@@ -2767,6 +2811,146 @@ class ViewManager {
 
             })
 
+        })
+
+        // Get Card Gio
+        ipcRenderer.on('get_card_gio', (e, file, event_type) => {
+
+            // add file to dirents
+            fileOperations.dirents.push(file);
+
+            let active_tab_content = document.querySelector('.active-tab-content');
+            let exists = 0;
+
+            if (view === 'grid') {
+
+                let folder_grid = active_tab_content.querySelector('.folder_grid');
+                let file_grid = active_tab_content.querySelector('.file_grid');
+
+                let empty_msg = document.querySelector('.empty_msg');
+                if (empty_msg) {
+                    empty_msg.classList.add('hidden');
+                }
+
+                // Check if card already exists
+                let cards = active_tab_content.querySelectorAll('.card')
+                cards.forEach(card => {
+                    if (card.dataset.href === file.href) {
+                        exists = 1;
+                        return;
+                    }
+                })
+
+                if (!exists) {
+                    let card = utilities.getCard(file); //getCardGio(file);
+                    if (file.is_dir) {
+
+                        folder_grid.prepend(card);
+                        getFolderCount(file.href);
+                        utilities.getFolderSize(file.href);
+
+                    } else {
+                        console.log('adding file');
+                        file_grid.prepend(card);
+                    }
+                    // viewManager.lazyload();
+                } else {
+                    let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
+                    let size = card.querySelector('.size');
+                    size.innerHTML = '';
+
+                    if (file.is_dir) {
+                        getFolderCount(file.href);
+                        utilities.getFolderSize(file.href);
+                    } else {
+                        size.innerHTML = getFileSize(file.size);
+                    }
+
+                }
+
+            } else if (view === 'list') {
+
+                // check if tr already exists
+                let trs = active_tab_content.querySelectorAll('.tr')
+                trs.forEach(tr => {
+                    if (tr.dataset.href === file.href) {
+                        exists = 1;
+                        return;
+                    }
+                })
+
+                if (!exists) {
+
+                    let table = active_tab_content.querySelector('.list_view');
+                    table.classList.add('hidden');
+
+                    let tbody = active_tab_content.querySelector('.table_body');
+                    if (tbody) {
+
+                        if (this.idx === -1) {
+
+                            let new_tr = this.getTableRow(file);
+                            if (file.is_dir) {
+                                tbody.prepend(new_tr);
+                            } else {
+                                let trs = Array.from(tbody.querySelectorAll('.tr'));
+                                // get number of trs with is_dir = true
+                                let idx = trs.filter(tr => tr.dataset.is_dir === 'true').length;
+                                console.log('idx', idx)
+                                tbody.insertBefore(new_tr, tbody.rows[idx]);
+                            }
+
+                        } else {
+
+                            console.log('running list view', this.idx);
+                            let new_tr = this.getTableRow(file);
+                            new_tr.classList.add('new_tr');
+                            tbody.insertBefore(new_tr, tbody.rows[this.idx]);
+                            new_tr.classList.remove('new_tr');
+
+                            if (file.is_dir) {
+                                getFolderCount(file.href);
+                                utilities.getFolderSize(file.href);
+                            } else {
+                                let size = new_tr.querySelector('.size');
+                                size.innerHTML = getFileSize(file.size);
+                            }
+
+                        }
+
+                        this.idx = -1;
+                    }
+
+                    table.classList.remove('hidden');
+
+                }
+
+            }
+
+            utilities.dragSelect();
+
+            if (view === 'grid') {
+                iconManager.resizeIcons(localStorage.getItem('icon_size'));
+            } else if (view === 'list') {
+                iconManager.resizeIcons(localStorage.getItem('list_icon_size'));
+            }
+
+        })
+
+        // Remove Card
+        ipcRenderer.on('remove_card', (e, href) => {
+            this.source0 = href;
+            let active_tab_content = document.querySelector('.active-tab-content');
+            let cards = active_tab_content.querySelectorAll('.card, .tr, .tr1')
+            cards.forEach((card, idx) => {
+                if (card.dataset.href === href) {
+                    this.idx = idx;
+                    console.log('removing card', idx)
+                    card.remove();
+                    // remove from dirents array
+                    fileOperations.dirents = fileOperations.dirents.filter(file => file.href !== href);
+                }
+            })
         })
 
         this.showSidebar();
@@ -2859,13 +3043,10 @@ class ViewManager {
     }
 
     // Get View
-    getView(dir, tab = 0) {
-
-        // show_loader();
-        // console.log('running get view');
-        ipcRenderer.send('get_files', dir, tab);
+    getView(source, tab = 0) {
+        // ipcRenderer.send('get_files', dir, tab);
+        fileOperations.getFiles(source, tab);
         clearHighlight();
-
     }
 
     /**
@@ -3003,36 +3184,222 @@ class ViewManager {
 
     }
 
-    // get list view
+    // Create a table row
+    getTableRow (file) {
+
+        let icon_div = add_div(['icon_div']);
+        let href = file['href'];
+
+        let name = add_div(['name']);
+        let display_name = add_div(['display_name']);
+        let link = add_link(href, file['display_name']);
+
+        let input = document.createElement('input');
+        const tr = document.createElement("tr");
+
+        input.type = 'text';
+        input.classList.add('hidden','input');
+        input.value = file['display_name'];
+
+        tr.dataset.href = href;
+        tr.dataset.name = file.display_name;
+        tr.dataset.type = file.content_type
+        tr.classList.add('tr', 'new_tr');
+
+        link.draggable = false;
+        input.draggable = false;
+        tr.draggable = true;
+
+        // check if directory
+        let is_dir = file['is_dir'];
+
+        tr.dataset.is_dir = is_dir;
+
+        // column headers array
+        const columnHeaders = Object.keys(settings.Captions).filter(
+            (caption) => settings.Captions[caption] === true
+        );
+
+        const mapped_columns = this.getMappedColumns();
+        // console.log('mapped columns', mapped_columns)
+        columnHeaders.forEach((property) => {
+
+            const mapped_property = mapped_columns[property];
+            const td = document.createElement("td");
+            td.classList.add(mapped_property);
+
+            let cellContent = file[mapped_property] || "";
+            switch (mapped_property) {
+                case 'display_name':
+
+                    display_name.append(link, input);
+                    name.append(icon_div, display_name);
+                    utilities.getIcon(file, icon_div);
+                    cellContent = name;
+
+                    break;
+                case 'mtime':
+                case 'ctime':
+                case 'atime':
+                    cellContent = getDateTime(file[mapped_property]) || '';
+                    break;
+                case 'size':
+                    cellContent = getFileSize(file[mapped_property]);
+                    break;
+                case 'count':
+            }
+
+            td.append(cellContent);
+            tr.appendChild(td);
+
+        });
+
+        if (is_dir) {
+            getFolderCount(href);
+            tr.classList.add('folder');
+        }
+
+        // Add title
+        tr.title = `Name: ${file.display_name} \n` +
+            `Location: ${file.location} \n` +
+            `Modified: ${getDateTime(file.mtime)} \n` +
+            `Created: ${getDateTime(file.ctime)} \n` +
+            `Accessed: ${getDateTime(file.atime)} \n` +
+            `Type: ${file.content_type} \n` +
+            `Size: ${getFileSize(file.size)}
+        `;
+
+        link.title = `Name: ${file.display_name} \n` +
+            `Location: ${file.location} \n` +
+            `Modified: ${getDateTime(file.mtime)} \n` +
+            `Created: ${getDateTime(file.ctime)} \n` +
+            `Accessed: ${getDateTime(file.atime)} \n` +
+            `Type: ${file.content_type} \n` +
+            `Size: ${getFileSize(file.size)}
+        `;
+
+        // event listeners //////////////////
+
+        // highlight for edit mode
+        tr.addEventListener('mouseenter', (e) => {
+            tr.classList.add('highlight');
+        })
+
+        tr.addEventListener('mouseleave', (e) => {
+            tr.classList.remove('highlight');
+        })
+
+        tr.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            tr.classList.toggle('highlight_select')
+        })
+
+        tr.addEventListener('contextmenu', (e) => {
+
+            e.preventDefault();
+            e.stopPropagation();
+            tr.classList.add('highlight_select');
+
+            if (is_dir && tr.dataset.href !== e.target.dataset.href){
+                ipcRenderer.send('folder_menu', file);
+            } else {
+                ipcRenderer.send('file_menu', file);
+            }
+
+        });
+
+        tr.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            getSelectedFiles();
+        });
+
+        tr.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (is_dir) {
+                tr.classList.add('highlight_target');
+            }
+        });
+
+        tr.addEventListener('dragleave', (e) => {
+            tr.classList.remove('highlight_target');
+        });
+
+        tr.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            ipcRenderer.send('main', 0);
+            if (!tr.classList.contains('highlight') && tr.classList.contains('highlight_target')) {
+                if (e.ctrlKey) {
+                    fileOperations.paste(file.href);
+                } else {
+                    fileOperations.move(file.href);
+                }
+            } else {
+                // console.log('did not find target')
+            }
+
+        });
+
+        // add event listener to link
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (is_dir) {
+                this.getView(file['href']);
+                tabManager.addTabHistory(file['href']);
+            } else {
+                ipcRenderer.send('open', file['href']);
+            }
+        })
+
+        input.addEventListener('click', (e) => {
+            e.stopPropagation();
+        })
+
+        return tr;
+
+    }
+
+    chunk_load () {
+
+        let active_tab_content = document.querySelector('.active-tab-content');
+        let tbody = active_tab_content.querySelector('.table_body');
+
+        const last_idx = Math.min(this.chunk_idx + this.chunk_size, fileOperations.dirents.length);
+        const chunk = fileOperations.dirents.slice(this.chunk_idx, last_idx);
+
+        console.log('chunk', chunk, this.chunk_idx, last_idx)
+
+        chunk.forEach((file) => {
+            let tr = this.getTableRow(file);
+            tbody.appendChild(tr);
+        });
+
+        this.chunk_idx = last_idx;
+        this.lazyload();
+
+    }
+
+    // Get list view
     getListView () {
-
-        // when switching view the data needs to be loaded for both views
-
-        console.log('running get list view')
 
         fetch('views/list.html').then(response => {
             return response.text();
         }).then(data => {
 
+            this.chunk_idx = 0;
+
             let dirents = fileOperations.dirents
             let active_tab_content = document.querySelector('.active-tab-content');
 
-            if (dirents.length === 0) {
-                const empty_msg = add_div(['empty_msg']);
-                empty_msg.innerHTML = 'Folder is Empty';
-                active_tab_content.append(empty_msg);
-                return;
-            }
+            // console.log('running get list view', dirents)
 
-            // hide grids
-            let grids = ['folder_grid', 'hidden_folder_grid', 'file_grid', 'hidden_file_grid'];
-            grids.forEach(grid => {
-                console.log('grid', grid)
-                let grid_item = active_tab_content.querySelector(`.${grid}`);
-                if (grid_item) {
-                    grid_item.classList.add('hidden');
-                }
-            });
+            if (dirents.length === 0) {
+                utilities.showEmptyFolderMsg();
+                return;
+            } else {
+                utilities.removeEmptyFolderMsg();
+            }
 
             // column headers array
             const columnHeaders = Object.keys(settings.Captions).filter(
@@ -3086,15 +3453,20 @@ class ViewManager {
 
             }
 
+            const table_container = active_tab_content.querySelector(".list_view");
             const tbody = active_tab_content.querySelector(".table_body");
             tbody.innerHTML = '';
+
+            tbody.classList.add('tbody_new');
+
+            // table.classList.add('new_table', 'hidden');
 
             // map columns
             let mapped_columns = this.getMappedColumns();
 
             // filter hidden files
-            const show_hidden = localStorage.getItem('show_hidden');
-            if (!show_hidden) {
+            // console.log(settings)
+            if (settings['Hidden Files'].show === false) {
                 dirents = dirents.filter((dirent) => !dirent.is_hidden);
             }
 
@@ -3108,156 +3480,27 @@ class ViewManager {
                 }
             });
 
-            dirents = this.sort(dirents);
+            fileOperations.dirents = this.sort(dirents);
 
             // populate data
-            dirents.forEach((rowData) => {
-
-                let file = rowData;
-                let icon_div = add_div(['icon_div']);
-                let folder_count = add_div(['count']);
-                let href = rowData['href'];
-
-                let name = add_div(['name']);
-                let display_name = add_div(['display_name']);
-                let link = add_link(href, rowData['display_name']);
-
-                let input = document.createElement('input');
-                const tr = document.createElement("tr");
-                const tr1 = document.createElement("tr");
-
-                input.type = 'text';
-                input.classList.add('hidden','input');
-                input.value = rowData['display_name'];
-
-                // check if directory
-                let is_dir = rowData['is_dir'];
-                tr.dataset.href = href;
-                tr.dataset.type = file.content_type
-                tr.classList.add('tr');
-                tr1.classList.add('tr1');
-
-                link.draggable = false;
-                input.draggable = false;
-                tr.draggable = true;
-
-                columnHeaders.forEach((property) => {
-
-                    const mapped_property = mapped_columns[property];
-                    const td = document.createElement("td");
-                    td.classList.add(mapped_property);
-
-                    let cellContent = rowData[mapped_property] || "";
-                    switch (mapped_property) {
-                        case 'display_name':
-
-                            display_name.append(link, input);
-                            name.append(icon_div, display_name);
-                            utilities.getIcon(file, icon_div);
-                            cellContent = name;
-
-                            break;
-                        case 'mtime':
-                        case 'ctime':
-                        case 'atime':
-                            cellContent = getDateTime(rowData[mapped_property]) || '';
-                            break;
-                        case 'size':
-                            cellContent = getFileSize(rowData[mapped_property]);
-                            break;
-                        case 'count':
-                //             if (is_dir) {
-                //                 cellContent = folder_count;
-                //             }
-                //             break
-                    }
-
-                    td.append(cellContent);
-                    tr.appendChild(td);
-
-                });
-
+            fileOperations.dirents.forEach((file) => {
+                let tr = this.getTableRow(file)
                 tbody.appendChild(tr);
-                tbody.appendChild(tr1);
-
-                if (is_dir) {
-                    getFolderCount(href);
-                    tr.classList.add('folder');
-                }
-
-                // event listeners //////////////////
-
-                // highlight for edit mode
-                tr.addEventListener('mouseenter', (e) => {
-                    tr.classList.add('highlight');
-                })
-
-                tr.addEventListener('mouseleave', (e) => {
-                    tr.classList.remove('highlight');
-                })
-
-                tr.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    tr.classList.toggle('highlight_select')
-                })
-
-                tr.addEventListener('contextmenu', (e) => {
-
-                    e.preventDefault();
-                    e.stopPropagation();
-                    tr.classList.add('highlight_select');
-
-                    if (is_dir && tr.dataset.href !== e.target.dataset.href){
-                        ipcRenderer.send('folder_menu', file);
-                    } else {
-                        ipcRenderer.send('file_menu', file);
-                    }
-
-                });
-
-                tr.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    if (is_dir) {
-                        tr.classList.add('highlight_target');
-                    }
-                });
-
-                tr.addEventListener('dragleave', (e) => {
-                    tr.classList.remove('highlight_target');
-                });
-
-                tr.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    ipcRenderer.send('main', 0);
-                    if (!tr.classList.contains('highlight') && tr.classList.contains('highlight_target')) {
-                        if (e.ctrlKey) {
-                            fileOperations.paste(file.href);
-                        } else {
-                            fileOperations.move(file.href);
-                        }
-                    } else {
-                        // console.log('did not find target')
-                    }
-
-                });
-
-                // add event listener to link
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (is_dir) {
-                        viewManager.getView(rowData['href']);
-                    } else {
-                        ipcRenderer.send('open', rowData['href']);
-                    }
-                })
-
-                input.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                })
-
-
+                tr.classList.remove('new_tr');
             });
+
+            // this.chunk_load();
+
+            tbody.classList.remove('tbody_new');
+
+            // active_tab_content.addEventListener('scroll', (e) => {
+            //     console.log('scrolling')
+            //     if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
+            //         if (this.chunk_idx < fileOperations.dirents.length) {
+            //             this.chunk_load();
+            //         }
+            //     }
+            // });
 
             let icon_size = iconManager.getIconSize();
             iconManager.resizeIcons(icon_size);
@@ -3266,6 +3509,7 @@ class ViewManager {
 
             this.lazyload();
             utilities.dragSelect();
+            hide_loader();
 
         }).catch(err => {
             console.log(err)
@@ -3309,136 +3553,6 @@ class ViewManager {
         iconManager.resizeIcons(icon_size);
 
     }
-
-    // /**
-    //  * List View
-    //  * This currently is not working. use get_view for now
-    //  */
-    // listView() {
-
-    //     // console.log('running list view')
-
-    //     let tabs_content = document.querySelectorAll('.tab-content');
-    //     // console.log(tabs_content)
-    //     tabs_content.forEach(tab_content => {
-
-    //         let header_row = tab_content.querySelector('.header_row');
-    //         if (header_row) {
-    //             header_row.classList.remove('hidden');
-    //         }
-
-    //         let grids = ['.folder_grid', '.file_grid', '.hidden_folder_grid', '.hidden_file_grid'];
-    //         grids.forEach(grid => {
-
-    //             // console.log(grid)
-
-    //             let grid_views = document.querySelectorAll(grid);
-    //             grid_views.forEach(grid_view => {
-
-    //                 // grid_view.classList.remove('grid');
-    //                 // grid_view.classList.add('grid1');
-
-    //                 let cards = grid_view.querySelectorAll('.card');
-    //                 cards.forEach(card => {
-    //                     card.classList.add('list');
-
-    //                     let content = card.querySelector('.content');
-    //                     content.classList.add('list');
-
-    //                     let item = content.querySelector('.item');
-    //                     item.classList.remove('header');
-    //                     item.classList.add('list', 'list_header');
-
-    //                     let icon_div = card.querySelector('.icon_div');
-    //                     icon_div.remove();
-    //                     item.prepend(icon_div);
-
-    //                     let href = card.querySelector('a');
-
-    //                     let header = card.querySelector('.header');
-    //                     if (!header) {
-    //                         header = add_div(['header', 'item']);
-    //                     }
-    //                     header.append(href);
-    //                     item.append(header);
-
-    //                     // Handle column headers for list view
-    //                     for (const key in settings.Captions) {
-    //                         if (settings.Captions[key]) {
-    //                             if (key === 'Location') {
-    //                                 let path = card.querySelector('.path');
-    //                                 path.classList.remove('hidden');
-    //                             }
-    //                             if (key === 'Modified') {
-    //                                 let mtime = card.querySelector('.mtime');
-    //                                 mtime.classList.remove('hidden');
-    //                             }
-    //                             if (key === 'Created') {
-    //                                 let ctime = card.querySelector('.ctime');
-    //                                 ctime.classList.remove('hidden');
-    //                             }
-    //                             if (key === 'Accessed') {
-    //                                 let atime = card.querySelector('.atime');
-    //                                 atime.classList.remove('hidden');
-    //                             }
-    //                             if (key === 'Type') {
-    //                                 let type = card.querySelector('.type');
-    //                                 type.classList.remove('hidden');
-    //                             }
-    //                             if (key === 'Size') {
-    //                                 let size = card.querySelector('.size');
-    //                                 size.classList.remove('hidden');
-    //                             }
-    //                             if (key === 'Count') {
-    //                                 let count = card.querySelector('.count');
-    //                                 count.classList.remove('hidden');
-    //                             }
-
-    //                         } else {
-    //                             if (key === 'Location') {
-    //                                 let path = card.querySelector('.path');
-    //                                 path.classList.add('hidden');
-    //                             }
-    //                             if (key === 'Modified') {
-    //                                 let mtime = card.querySelector('.mtime');
-    //                                 mtime.classList.add('hidden');
-    //                             }
-    //                             if (key === 'Created') {
-    //                                 let ctime = card.querySelector('.ctime');
-    //                                 ctime.classList.add('hidden');
-    //                             }
-    //                             if (key === 'Accessed') {
-    //                                 let atime = card.querySelector('.atime');
-    //                                 atime.classList.add('hidden');
-    //                             }
-    //                             if (key === 'Type') {
-    //                                 let type = card.querySelector('.type');
-    //                                 type.classList.add('hidden');
-    //                             }
-    //                             if (key === 'Size') {
-    //                                 let size = card.querySelector('.size');
-    //                                 size.classList.add('hidden');
-    //                             }
-    //                             if (key === 'Count') {
-    //                                 let count = card.querySelector('.count');
-    //                                 count.classList.add('hidden');
-    //                             }
-    //                             // console.log(key);
-    //                         }
-    //                     }
-
-    //                 })
-
-    //             })
-
-    //         })
-
-    //     })
-
-    //     let icon_size = iconManager.getIconSize();
-    //     iconManager.resizeIcons(icon_size);
-
-    // }
 
     // Lazy load images
     lazyload() {
@@ -3722,8 +3836,6 @@ class FileOperations {
             let tab = data.tab;
             let display_name = data.display_name;
 
-            show_loader();
-
             // if (source !== 'Recent') {
                 localStorage.setItem('location', source);
             // }
@@ -3792,9 +3904,9 @@ class FileOperations {
             })
 
             if (dirents.length === 0) {
-                let empty_msg = add_div(['empty_msg']);
-                empty_msg.innerHTML = 'Folder is Empty';
-                active_tab_content.append(empty_msg);
+                utilities.showEmptyFolderMsg();
+            } else {
+                utilities.removeEmptyFolderMsg();
             }
 
             active_label.innerHTML = display_name;
@@ -3869,7 +3981,7 @@ class FileOperations {
             navigation.getCardCount();
             navigation.getCardGroups();
 
-            hide_loader();
+            // hide_loader();
             clear();
 
         })
@@ -3924,6 +4036,12 @@ class FileOperations {
 
     }
 
+    // main call to get list of files in a directory
+    getFiles(source, tab) {
+        ipcRenderer.send('get_files', source, tab);
+        show_loader();
+    }
+
     // Cut
     cut() {
         this.cut_flag = 1;
@@ -3949,7 +4067,7 @@ class FileOperations {
 
     // Past Files
     paste(destination) {
-        // console.log('running paste', destination)
+        console.log('running paste', destination)
         utilities.clearFolderSize(destination);
         ipcRenderer.send('paste', destination);
         clearHighlight();
@@ -4748,7 +4866,7 @@ ipcRenderer.on('recent_files', (e, dirents) => {
 
 // Get Folder Size
 ipcRenderer.on('folder_size', (e, source, folder_size) => {
-    console.log('setting folder size', folder_size)
+    // console.log('setting folder size', folder_size)
     let tab_content = document.querySelector('.active-tab-content');
     let folders = tab_content.querySelector('.folder_grid, .hidden_folder_grid, .list_view');
     if (folders) {
@@ -4991,97 +5109,81 @@ ipcRenderer.on('confirm_delete', (e, delete_arr) => {
 
 })
 
-// Get Card Gio
-ipcRenderer.on('get_card_gio', (e, file) => {
+// // Get Card Gio
+// ipcRenderer.on('get_card_gio', (e, file, source0) => {
 
-    console.log('running get card gio');
-    let active_tab_content = document.querySelector('.active-tab-content');
-    let exists = 0;
+//     console.log('running get card gio');
+//     let active_tab_content = document.querySelector('.active-tab-content');
+//     let exists = 0;
 
-    if (view === 'grid') {
+//     if (view === 'grid') {
 
-        console.log('running list view', file.href);
+//         console.log('running list view', file.href);
 
-        let folder_grid = active_tab_content.querySelector('.folder_grid');
-        let file_grid = active_tab_content.querySelector('.file_grid');
-        let empty_msg = document.querySelector('.empty_msg');
+//         let folder_grid = active_tab_content.querySelector('.folder_grid');
+//         let file_grid = active_tab_content.querySelector('.file_grid');
+//         let empty_msg = document.querySelector('.empty_msg');
 
-        if (empty_msg) {
-            empty_msg.classList.add('hidden');
-        }
+//         if (empty_msg) {
+//             empty_msg.classList.add('hidden');
+//         }
 
-        // Check if card already exists
-        let cards = active_tab_content.querySelectorAll('.card')
-        cards.forEach(card => {
-            if (card.dataset.href === file.href) {
-                exists = 1;
-                return;
-            }
-        })
+//         // Check if card already exists
+//         let cards = active_tab_content.querySelectorAll('.card')
+//         cards.forEach(card => {
+//             if (card.dataset.href === file.href) {
+//                 exists = 1;
+//                 return;
+//             }
+//         })
 
-        if (!exists) {
-            let card = utilities.getCard(file); //getCardGio(file);
-            if (file.is_dir) {
+//         if (!exists) {
+//             let card = utilities.getCard(file); //getCardGio(file);
+//             if (file.is_dir) {
 
-                folder_grid.prepend(card);
-                getFolderCount(file.href);
-                utilities.getFolderSize(file.href);
+//                 folder_grid.prepend(card);
+//                 getFolderCount(file.href);
+//                 utilities.getFolderSize(file.href);
 
-            } else {
-                console.log('adding file');
-                file_grid.prepend(card);
-            }
-            // viewManager.lazyload();
-        } else {
-            let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
-            let size = card.querySelector('.size');
-            size.innerHTML = '';
+//             } else {
+//                 console.log('adding file');
+//                 file_grid.prepend(card);
+//             }
+//             // viewManager.lazyload();
+//         } else {
+//             let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
+//             let size = card.querySelector('.size');
+//             size.innerHTML = '';
 
-            if (file.is_dir) {
-                getFolderCount(file.href);
-                utilities.getFolderSize(file.href);
-            } else {
-                size.innerHTML = getFileSize(file.size);
-            }
+//             if (file.is_dir) {
+//                 getFolderCount(file.href);
+//                 utilities.getFolderSize(file.href);
+//             } else {
+//                 size.innerHTML = getFileSize(file.size);
+//             }
 
-        }
+//         }
 
-    } else if (view === 'list') {
+//     } else if (view === 'list') {
 
-        console.log('running list view', file.href);
+//         let tbody = active_tab_content.querySelector('.table_body');
+//         if (tbody) {
+//             let trs = document.querySelectorAll('.tr');
+//             let tr = viewManager.getTableRow(file);
+//             tbody.app(tr);
+//         }
 
-        let tbody = active_tab_content.querySelector('.table_body');
-        if (tbody) {
+//     }
 
-            let tr = document.createElement('tr');
-            tr.classList.add('tr');
-            tr.dataset.href = file.href;
+//     utilities.dragSelect();
 
-            const mappedColumns = viewManager.getMappedColumns();
-            console.log(mappedColumns);
-            for (let column in mappedColumns) {
-                console.log(mappedColumns[column]);
-                let td = document.createElement('td');
-                td.textContent = file[mappedColumns[column]];
-                tr.append(td);
-            }
+//     if (view === 'grid') {
+//         iconManager.resizeIcons(localStorage.getItem('icon_size'));
+//     } else if (view === 'list') {
+//         iconManager.resizeIcons(localStorage.getItem('list_icon_size'));
+//     }
 
-            tbody.prepend(tr);
-
-
-        }
-
-    }
-
-    utilities.dragSelect();
-
-    if (view === 'grid') {
-        iconManager.resizeIcons(localStorage.getItem('icon_size'));
-    } else if (view === 'list') {
-        iconManager.resizeIcons(localStorage.getItem('list_icon_size'));
-    }
-
-})
+// })
 
 // Get Card
 ipcRenderer.on('get_card', (e, file) => {
@@ -5097,15 +5199,15 @@ ipcRenderer.on('get_card', (e, file) => {
 
 })
 
-// Remove Card
-ipcRenderer.on('remove_card', (e, href) => {
-    let cards = document.querySelectorAll('.card, .tr')
-    cards.forEach(card => {
-        if (card.dataset.href === href) {
-            card.remove();
-        }
-    })
-})
+// // Remove Card
+// ipcRenderer.on('remove_card', (e, href) => {
+//     let cards = document.querySelectorAll('.card, .tr')
+//     cards.forEach(card => {
+//         if (card.dataset.href === href) {
+//             card.remove();
+//         }
+//     })
+// })
 
 ipcRenderer.on('replace_card', (e, href, file) => {
 
@@ -6127,7 +6229,6 @@ function add_img(src) {
 // }
 
 ipcRenderer.on('show_loader', (e) => {
-    console.log('running show loader')
     show_loader();
 })
 
@@ -6136,15 +6237,30 @@ ipcRenderer.on('hide_loader', (e) => {
     hide_loader();
 })
 
+// Show loader
 function show_loader() {
-    document.body.style.cursor = 'wait';
+
+    // utilities.msg(`${spinner} Loading...`, 0);
+    let msg = document.querySelector('.msg');
+    let spinner = add_img('assets/icons/spinner.gif');
+
+    spinner.style = 'width: 12px; height: 12px;'
+
+    msg.classList.remove('hidden');
+    msg.innerHTML = '';
+    msg.append(spinner, ' Loading...');
+
 }
 
-/**
- * Hide Loader
- */
+
+// Hide Loader
 function hide_loader() {
-    document.body.style.cursor = 'auto';
+
+    // document.body.style.cursor = 'auto';
+    let msg = document.querySelector('.msg');
+    msg.innerHTML = '';
+    msg.classList.add('hidden');
+
 }
 
 function add_item(text) {
@@ -6188,7 +6304,7 @@ function clear() {
 
     // console.log('running clear');
     clearHighlight();
-    utilities.msg('');
+    // utilities.msg('');
 
     copy_arr = [];
     selected_files_arr = [];
@@ -6224,7 +6340,7 @@ function clearHighlight() {
         }
 
     })
-    utilities.msg('');
+    // utilities.msg('');
 }
 
 // Add column
@@ -7001,6 +7117,7 @@ function editWorkspace (href) {
  * Add Highlighted Divs to selected_files_arr[]
  */
 function getSelectedFiles() {
+
     selected_files_arr = [];
     let active_tab_content = document.querySelector('.active-tab-content');
     let selected_items = Array.from(active_tab_content.querySelectorAll('.highlight, .highlight_select'));
@@ -7081,116 +7198,6 @@ function clearContextMenu(e) {
         })
     }
 }
-
-// function lazyloadCards() {
-//     // Lazy load images
-//     let lazy = [].slice.call(document.querySelectorAll('.card'));
-//     // // console.log(lazy)
-//     // Check if window
-//     if ("IntersectionObserver" in window) {
-//         // Get reference to lazy objects
-//         let lazyObserver = new IntersectionObserver(function (entries, observer) {
-//             // console.log('entries', entries.length);
-//             entries.forEach((e, idx) => {
-//                 if (e.isIntersecting) {
-//                     let lazyCard = e.target;
-//                     // let card = document.querySelector(`[data-href="${lazyCard.dataset.href}"]`)
-//                     // // console.log(file);
-//                     // card.append(getCardGio(file));
-//                     // lazyCard.append(card);
-//                     // lazyCard.src = lazyCard.dataset.src;
-//                     lazyCard.classList.remove("lazy");
-//                     // // console.log(lazyCard.dataset.href)
-//                     // ipcRenderer.send('get_card_gio', lazyCard.dataset.href);
-//                     lazyObserver.unobserve(lazyCard);
-//                 }
-//             })
-//         })
-//         // THIS RUNS ON INITIAL LOAD
-//         for (let i = 0; i < lazy.length; i++) {
-//             lazyObserver.observe(lazy[i])
-//         }
-//     }
-// }
-
-// function lazyload() {
-//     // Lazy load images
-//     let lazyImages = [].slice.call(document.querySelectorAll(".lazy"))
-//     // CHECK IF WINDOW
-//     if ("IntersectionObserver" in window) {
-//         // GET REFERENCE TO LAZY IMAGE
-//         let lazyImageObserver = new IntersectionObserver(function (entries, observer) {
-//             // console.log('entries', entries.length)
-//             entries.forEach((e, idx) => {
-//                 if (e.isIntersecting) {
-
-//                     let img = e.target;
-//                     img.src = img.dataset.src;
-//                     // let exists = fs.existsSync(thumbnail);
-//                     // if (exists) {
-//                     //     console.log(thumbnail)
-//                     //     img.src = thumbnail;
-//                     // } else {
-//                     //     // ipcRenderer.send('create_thumbnail', img.dataset.src, thumbnail);
-//                     //     img.src = img.dataset.src;
-//                     // }
-
-//                     img.classList.remove("lazy");
-//                     lazyImageObserver.unobserve(img);
-//                 }
-//             })
-//         })
-//         // THIS RUNS ON INITIAL LOAD
-//         for (let i = 0; i < lazyImages.length; i++) {
-//             lazyImageObserver.observe(lazyImages[i])
-//         }
-//     }
-// }
-
-// function quickSearch(e) {
-//     let main = document.querySelector('.main');
-//     let quicksearch = add_div(['quicksearch', 'bottom', 'right']); //document.querySelector('.quicksearch');
-//     let txt_quicksearch = document.createElement('input'); //document.getElementById('txt_quicksearch');
-
-//     txt_quicksearch.id = 'txt_quicksearch';
-//     txt_quicksearch.classList.add('input');
-//     txt_quicksearch.type = 'text';
-
-//     quicksearch.append(txt_quicksearch);
-//     quicksearch.classList.remove('hidden');
-//     main.append(quicksearch);
-
-//     txt_quicksearch.focus();
-
-//     txt_quicksearch.addEventListener('keydown', (e) => {
-//         if (/^[A-Za-z]$/.test(e.key)) {
-//             // txt_quicksearch.value = e.key
-//         }
-
-//         if (e.key === 'Enter') {
-
-//             let c = 0;
-//             let cards = document.querySelectorAll('.card')
-//             cards.forEach(card => {
-//                 if (card.dataset.href.toLocaleLowerCase().indexOf(txt_quicksearch.value) > -1) {
-//                     card.classList.add('highlight');
-//                     if (c === 0) {
-//                         let href = card.querySelector('.header a');
-//                         href.focus();
-//                     }
-//                     ++c;
-//                 }
-//             })
-//             quicksearch.classList.add('hidden');
-//             txt_quicksearch.value = '';
-//         }
-
-//         if (e.key === 'Escape') {
-//             quicksearch.classList.add('hidden')
-//         }
-
-//     })
-// }
 
 function clearViews() {
 

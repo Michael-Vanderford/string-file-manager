@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", (e) => {
         mt.bind(shortcut.SelectAll.toLocaleLowerCase(), (e) => {
             e.preventDefault();
             let tab_content = document.querySelector('.active-tab-content');
-            let cards = tab_content.querySelectorAll('.card')
+            let cards = tab_content.querySelectorAll('.card, .tr')
             cards.forEach(card => {
                 card.classList.add('highlight_select');
             })

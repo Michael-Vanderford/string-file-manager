@@ -43,7 +43,7 @@ let selected_files_delete_arr = []
 class FileManager {
 
     constructor() {
-        let source0 = '';
+        this.source0 = '';
     }
 
     // Get files array
@@ -53,9 +53,13 @@ class FileManager {
         try {
             gio.watcher(href, (watcher) => {
                 watcher_failed = 0;
-                // console.log('watcher_event', watcher.event)
+                console.log('watcher_event', watcher.event)
                 if (watcher.event !== 'unknown') {
+                    if (watcher.event === 'moved') {
+                        console.log('running move', watcher.filename);
+                    }
                     if (watcher.event === 'deleted') {
+                        console.log('running delete', watcher.filename);
                         win.send('remove_card', watcher.filename);
                     }
                     if (watcher.event === 'created' || watcher.event === 'changed') {
@@ -63,7 +67,7 @@ class FileManager {
                             // console.log(watcher.event, watcher.filename);
                             let file = gio.get_file(watcher.filename);
                             if (file) {
-                                win.send('get_card_gio', file);
+                                win.send('get_card_gio', file, watcher.event);
                                 if (file.is_dir) {
                                     win.send('get_folder_count', watcher.filename);
                                     win.send('get_folder_size', watcher.filename);
@@ -94,7 +98,7 @@ class FileManager {
                 thumb.postMessage({ cmd: 'create_thumbnail', source: href, destination: thumb_dir, sort: sort });
             }
             // Call ls worker to get file data
-            ls.postMessage({ cmd: 'ls', source: href, tab: tab });
+            ls.postMessage({ cmd: 'ls', source: href, tab: tab});
 
         } catch (err) {
             win.send('msg', err);
@@ -1697,7 +1701,8 @@ ipcMain.on('update_settings_columns', (e, key, value, location) => {
     // fs.writeFileSync(settings_file, JSON.stringify(settings, null, 4));
     settingsManger.updateSettings(settings);
     win.send('msg', 'Settings updated')
-    win.send('get_view', location)
+    win.send('get_list_view');
+    // win.send('get_view', location)
 })
 
 ipcMain.on('create_thumbnail', (e, href) => {
@@ -2061,11 +2066,11 @@ ipcMain.on('paste', (e, destination) => {
                             }
                             case 'copy_done': {
                                 if (is_main) {
-                                    // if (watcher_failed) {
+                                    if (watcher_failed) {
                                         let file = gio.get_file(data.destination);
                                         win.send('remove_card', data.destination);
                                         win.send('get_card_gio', file);
-                                    // }
+                                    }
                                 } else {
                                     if (!is_main) {
                                         win.send('get_folder_count', path.dirname(data.destination));
@@ -2183,6 +2188,8 @@ function createWindow() {
         x: window_settings.window.x,
         y: window_settings.window.y,
         frame: true,
+        transparent: true,
+        hasShadow: true,
         autoHideMenuBar: true,
         icon: path.join(__dirname, '/assets/icons/sfm.png'),
         webPreferences: {

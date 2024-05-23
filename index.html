@@ -12,9 +12,30 @@
     <script type="" src="./node_modules/chart.js/dist/chart.min.js"></script>
     <script type="" src="./node_modules/mousetrap/mousetrap.min.js"></script>
     <title></title>
+    <style>
+        .title-bar {
+            -webkit-app-region: drag; /* Allows the area to be draggable */
+            height: 30px;
+            background: #333;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+        }
+        .window-controls {
+            -webkit-app-region: no-drag; /* Prevents controls from being draggable */
+        }
+    </style>
 </head>
 <body>
-
+    <!-- <div class="title-bar">
+        <span>My Electron App</span>
+        <div class="window-controls">
+          <button id="minimize">_</button>
+          <button id="close">X</button>
+        </div>
+    </div> -->
     <div class="container">
 
         <div class="header_container">

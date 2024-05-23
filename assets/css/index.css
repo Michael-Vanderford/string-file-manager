@@ -152,28 +152,42 @@ body {
 .list_view table {
     table-layout: fixed;
     width: 100%;
-    border-collapse: collapse;
-    margin-top: -10px;
+    border-spacing: 0 5px;
+    margin-top: -15px;
 }
 
 .list_view th {
     height: 23px;
     position: sticky;
     top: -10px;
-    padding-bottom: 2px;
+    padding-bottom: 4px;
     background: var(--main);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
     z-index: 1;
     cursor: pointer;
 }
 
-.list_view tr {
-    /* height: 40px; */
+.list_view .tr {
+    /* opacity: 1; */
+}
+
+.list_view .tr.new_tr {
+    /* opacity: 0; */
+    /* transition: opacity 1.5s ease-in-out; */
 }
 
 /* Empty row to add spacing on highlight */
 .list_view .tr1 {
     height: 5px;
+}
+
+.list_view .table_body {
+    /* opacity: 1; */
+}
+
+.list_view .tbody_new {
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
 }
 
 .list_view td {
@@ -219,16 +233,29 @@ body {
     width: 100%;
 }
 
+.list_view th.location {
+    max-width: 150px;
+    width: 15%;
+}
+
 .list_view th.modified {
-    max-height: 150px;
+    max-width: 150px;
+    width: 15%;
 }
 
 .list_view th.created {
     max-width: 150px;
+    width: 15%;
+}
+
+.list_view th.accessed{
+    max-width: 150px;
+    width: 15%;
 }
 
 .list_view th.type {
     max-width: 50px;
+    width: 15%;
 }
 
 .list_view th.size {
@@ -707,24 +734,27 @@ th {
 
 /* css is in merge.html */
 .merge_file_container {
-    /* background-color: var(--dialog); */
-    /* border: inset; */
-    /* overflow: auto;
-    width: 95%;
-    height: 100%; */
-    /* background: var(--dialog) */
+
 }
 
 .merge_file_container a {
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 350px;
 }
 
 .destination_table table {
     padding: 5px;
+    width: 100%;
 }
 
-.destination_table .destination {
-    word-break: break-all;
+.destination_table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 50px;
 }
 
 #chart {
