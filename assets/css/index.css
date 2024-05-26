@@ -152,7 +152,7 @@ body {
 .list_view table {
     table-layout: fixed;
     width: 100%;
-    border-spacing: 0 5px;
+    border-spacing: 0 8px;
     margin-top: -15px;
 }
 
@@ -194,7 +194,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 5px;
+    padding: 2px;
 }
 
 .list_view td:first-child {
@@ -217,6 +217,10 @@ body {
 
 .list_view .display_name {
     width: 90%;
+}
+
+.display_name a {
+    outline: none;
 }
 
 .list_view a {
@@ -377,6 +381,20 @@ th {
     font-size: 1em;
     height: 23px;
     width: 96%;
+    min-width: 250px;
+    font-weight: bold;
+}
+
+.nav_menu input[type=text].filter {
+    border-radius: 5px;
+    color: var(--text);
+    padding-left: 10px;
+    margin-right: 15px;
+    background: var(--location);
+    border: 1px solid var(--location-border);
+    font-size: 1em;
+    height: 23px;
+    width: 250px;
     font-weight: bold;
 }
 

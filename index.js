@@ -62,9 +62,9 @@ document.addEventListener("DOMContentLoaded", (e) => {
         })
 
         // Quick Search
-        mt.bind(shortcut.QuickSearch.toLowerCase(), (e) => {
-            window.api.quickSearch(e);
-        })
+        // mt.bind(shortcut.QuickSearch.toLowerCase(), (e) => {
+        //     window.api.quickSearch(e);
+        // })
 
         // New Window
         mt.bind(shortcut.NewWindow.toLocaleLowerCase(), (e) => {
@@ -84,6 +84,7 @@ document.addEventListener("DOMContentLoaded", (e) => {
 
         // Select All Ctrl+A
         mt.bind(shortcut.SelectAll.toLocaleLowerCase(), (e) => {
+            console.log('Select All');
             e.preventDefault();
             let tab_content = document.querySelector('.active-tab-content');
             let cards = tab_content.querySelectorAll('.card, .tr')

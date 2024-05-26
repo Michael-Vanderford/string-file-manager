@@ -599,7 +599,7 @@ worker.on('message', (data) => {
             if (is_main) {
                 // if (watcher_failed) {
                     let file = gio.get_file(data.destination);
-                    win.send('get_card_gio', file);
+                    win.send('get_card_gio', file, 'created');
                     win.send('edit', data.destination);
                 // }
                 break;
