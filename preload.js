@@ -4303,8 +4303,21 @@ class FileOperations {
 
     // Call get Properties
     fileInfo() {
-        getSelectedFiles();
+        // don't run get selected files here
+        let selected_files_arr = [];
+        let location = document.querySelector('.location');
+        let active_tab_content = document.querySelector('.active-tab-content');
+        let selected_items = Array.from(active_tab_content.querySelectorAll('.highlight, .highlight_select'));
+        selected_items.forEach(item => {
+            selected_files_arr.push(item.dataset.href);
+            // if (item.dataset.type.startsWith('image/')) {
+                // console.log(item.dataset.type)
+                // ipcRenderer.send('copy_to_clipboard', item.dataset.href);
+            // }
+        })
+
         ipcRenderer.send('get_properties', selected_files_arr, location.value);
+        selected_files_arr = [];
         clear();
     }
 

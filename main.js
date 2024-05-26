@@ -53,13 +53,13 @@ class FileManager {
         try {
             gio.watcher(href, (watcher) => {
                 watcher_failed = 0;
-                console.log('watcher_event', watcher.event)
+                // console.log('watcher_event', watcher.event)
                 if (watcher.event !== 'unknown') {
                     if (watcher.event === 'moved') {
-                        console.log('running move', watcher.filename);
+                        // console.log('running move', watcher.filename);
                     }
                     if (watcher.event === 'deleted') {
-                        console.log('running delete', watcher.filename);
+                        // console.log('running delete', watcher.filename);
                         win.send('remove_card', watcher.filename);
                     }
                     if (watcher.event === 'created' || watcher.event === 'changed') {
