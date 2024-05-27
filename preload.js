@@ -3466,6 +3466,12 @@ class ViewManager {
     }
 
     initColResize(e) {
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        let th = document.querySelector('th');
+
         this.currentColumn = e.target.parentElement;
         this.initialX = e.clientX;
         document.addEventListener('mousemove', this.resizeCol);
@@ -3473,12 +3479,24 @@ class ViewManager {
     }
 
     resizeCol(e) {
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('resizing column')
+
         const dx = e.clientX - this.initialX;
-        const newWidth = Math.max(this.currentColumn.offsetWidth + dx, 50); // Set a minimum width of 50px
+        const newWidth = Math.max(this.currentColumn.offsetWidth + dx, 10); // Set a minimum width of 50px
         this.currentColumn.style.width = `${newWidth}px`;
     }
 
-    stopColResize() {
+    stopColResize(e) {
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('stopping column resize')
+
         document.removeEventListener('mousemove', this.resizeCol);
         document.removeEventListener('mouseup', this.stopColResize);
     }
