@@ -927,7 +927,8 @@ class Utilities {
         let allowClick = 1;
         active_tab_content.addEventListener('mousemove', (e) => {
 
-            // e.preventDefault();
+            e.preventDefault();
+            e.stopPropagation();
 
             if (!isSelecting || is_dragging_tab) {
                 return;
@@ -2077,7 +2078,7 @@ class Navigation {
         let grids = ['folder_grid', 'hidden_folder_grid', 'file_grid', 'hidden_file_grid', 'list_view'];
         grids.forEach(grid => {
             let grid_item = active_tab_content.querySelector(`.${grid}`);
-            console.log('grid item', grid_item)
+            // console.log('grid item', grid_item)
             if (grid_item && !grid_item.classList.contains('hidden')) {
                 let cards = grid_item.querySelectorAll('.card, .tr');
                 if (cards.length > 0) {
@@ -2804,6 +2805,14 @@ class ViewManager {
         this.chunk_size = 20;
         this.chunk_idx = 0;
 
+        this.currentColumn;
+        this.initialX;
+
+        // Binding the methods to the instance
+        this.initColResize = this.initColResize.bind(this);
+        this.resizeCol = this.resizeCol.bind(this);
+        this.stopColResize = this.stopColResize.bind(this);
+
         // Update list view on column change
         ipcRenderer.on('get_list_view', (e) => {
             let active_tab_content = document.querySelector('.active-tab-content');
@@ -3456,6 +3465,24 @@ class ViewManager {
 
     }
 
+    initColResize(e) {
+        this.currentColumn = e.target.parentElement;
+        this.initialX = e.clientX;
+        document.addEventListener('mousemove', this.resizeCol);
+        document.addEventListener('mouseup', this.stopColResize);
+    }
+
+    resizeCol(e) {
+        const dx = e.clientX - this.initialX;
+        const newWidth = Math.max(this.currentColumn.offsetWidth + dx, 50); // Set a minimum width of 50px
+        this.currentColumn.style.width = `${newWidth}px`;
+    }
+
+    stopColResize() {
+        document.removeEventListener('mousemove', this.resizeCol);
+        document.removeEventListener('mouseup', this.stopColResize);
+    }
+
     // Get list view
     getListView () {
 
@@ -3469,7 +3496,6 @@ class ViewManager {
             let active_tab_content = document.querySelector('.active-tab-content');
 
             // console.log('running get list view', dirents)
-
             // if (dirents.length === 0) {
             //     utilities.showEmptyFolderMsg();
             //     return;
@@ -3504,26 +3530,36 @@ class ViewManager {
                     const th = document.createElement("th");
                     th.textContent = header;
                     th.classList.add(header.toLocaleLowerCase());
+
+                    const drag_handle = add_div(['th_drag_handle']);
+                    th.prepend(drag_handle);
+
                     headerRow.appendChild(th);
+                    th.style.width = `${settings['Captions Size'][header]}px`;
 
-                    // sort by header
-                    th.addEventListener('click', (e) => {
+                    drag_handle.addEventListener('mousedown', this.initColResize)
 
-                        // sort by column
-                        sort_order = sort_order === 'asc' ? 'desc' : 'asc';
+                    // // sort by header
+                    // th.addEventListener('click', (e) => {
 
-                        settings.Sort.by = header.toLocaleLowerCase();
-                        settings.Sort.order = sort_order;
-                        ipcRenderer.send('save_settings', settings);
-                        this.getListView();
+                    //     e.preventDefault();
+                    //     e.stopPropagation();
 
-                    });
+                    //     // sort by column
+                    //     sort_order = sort_order === 'asc' ? 'desc' : 'asc';
 
-                    th.addEventListener('contextmenu', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        ipcRenderer.send('columns_menu', header);
-                    })
+                    //     settings.Sort.by = header.toLocaleLowerCase();
+                    //     settings.Sort.order = sort_order;
+                    //     ipcRenderer.send('save_settings', settings);
+                    //     this.getListView();
+
+                    // });
+
+                    // th.addEventListener('contextmenu', (e) => {
+                    //     e.preventDefault();
+                    //     e.stopPropagation();
+                    //     ipcRenderer.send('columns_menu', header);
+                    // })
 
                 });
 
@@ -3597,7 +3633,6 @@ class ViewManager {
         // .catch(err => {
         //     console.log(err)
         // })
-
 
     }
 

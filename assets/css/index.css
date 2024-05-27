@@ -161,10 +161,26 @@ body {
     position: sticky;
     top: -10px;
     padding-bottom: 4px;
+    padding-left: 5px;
     background: var(--main);
-    border-bottom: 2px solid var(--border);
+    border-bottom: 1px solid var(--border);
     z-index: 1;
     cursor: pointer;
+}
+
+.list_view .th_drag_handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 5px;
+    border-right: 1px solid var(--border);
+    background-color: var(--main);
+    cursor: col-resize;
+}
+
+.list_view th:last-child .th_drag_handle {
+    display: none;
 }
 
 .list_view .tr {
@@ -195,6 +211,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     padding: 2px;
+    padding-left: 5px;
 }
 
 .list_view td:first-child {
@@ -208,7 +225,7 @@ body {
 }
 
 .list_view th.name {
-    width: 350px;
+    /* width: 350px; */
 }
 
 .list_view .name {
@@ -239,35 +256,35 @@ body {
 
 .list_view th.location {
     max-width: 150px;
-    width: 15%;
+    /* width: 15%; */
 }
 
 .list_view th.modified {
     max-width: 150px;
-    width: 15%;
+    /* width: 15%; */
 }
 
 .list_view th.created {
     max-width: 150px;
-    width: 15%;
+    /* width: 15%; */
 }
 
 .list_view th.accessed{
     max-width: 150px;
-    width: 15%;
+    /* width: 15%; */
 }
 
 .list_view th.type {
     max-width: 50px;
-    width: 15%;
+    /* width: 15%; */
 }
 
 .list_view th.size {
-    width: 60px;
+    /* width: 60px; */
 }
 
 .list_view th.count {
-    width: 60px;
+    /* width: 60px; */
 }
 
 .list_view td {
