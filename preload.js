@@ -927,8 +927,8 @@ class Utilities {
         let allowClick = 1;
         active_tab_content.addEventListener('mousemove', (e) => {
 
-            e.preventDefault();
-            e.stopPropagation();
+            // e.preventDefault();
+            // e.stopPropagation();
 
             if (!isSelecting || is_dragging_tab) {
                 return;
@@ -1332,11 +1332,12 @@ class Utilities {
 
                         // if (card.dataset.href.toLocaleLowerCase().indexOf(this.quick_search_sting) > -1) {
                         if (card.dataset.name.toLocaleLowerCase().startsWith(this.quick_search_sting)) {
+
                             card.classList.add('highlight_select');
 
                             if (c === 0) {
                                 let active_href = card.querySelector('.header a, .display_name a');
-                                active_href.focus();
+                                // active_href.focus();
                             }
                             ++c
 
@@ -1344,9 +1345,7 @@ class Utilities {
                             card.classList.remove('highlight_select');
                         }
                     })
-
-                    this.filter.value = this.quick_search_sting;
-
+                    // this.filter.value = this.quick_search_sting;
                 }
 
                 if (this.quick_search_sting !== '' && e.key === 'Backspace') {
@@ -2805,10 +2804,11 @@ class ViewManager {
         this.chunk_size = 20;
         this.chunk_idx = 0;
 
-        this.currentColumn;
-        this.initialX;
+        this.currentColumn = null;
+        this.initialX = 0;
+        this.initialWidth = 0;
+        this.sidebar_width = 0;
 
-        // Binding the methods to the instance
         this.initColResize = this.initColResize.bind(this);
         this.resizeCol = this.resizeCol.bind(this);
         this.stopColResize = this.stopColResize.bind(this);
@@ -3467,38 +3467,53 @@ class ViewManager {
 
     initColResize(e) {
 
-        e.preventDefault();
         e.stopPropagation();
+        e.preventDefault();
 
-        let th = document.querySelector('th');
+        const sidebar = document.querySelector('.sidebar');
+        this.sidebar_width = sidebar.offsetWidth;
 
         this.currentColumn = e.target.parentElement;
         this.initialX = e.clientX;
+        this.initialWidth = this.currentColumn.offsetWidth;
+
+        console.log('sidebar_width:', this.sidebar_width);
+        console.log('Initial X:', this.initialX);
+        console.log('Initial Width:', this.initialWidth);
+
         document.addEventListener('mousemove', this.resizeCol);
         document.addEventListener('mouseup', this.stopColResize);
+
     }
 
     resizeCol(e) {
 
-        e.preventDefault();
         e.stopPropagation();
+        e.preventDefault();
 
-        console.log('resizing column')
-
-        const dx = e.clientX - this.initialX;
-        const newWidth = Math.max(this.currentColumn.offsetWidth + dx, 10); // Set a minimum width of 50px
+        const currentX = e.clientX;
+        const dx = currentX - this.initialX //e.clientX - this.initialX;
+        const newWidth = Math.max(this.sidebar_width + dx, 50);
         this.currentColumn.style.width = `${newWidth}px`;
+
+        // console.log('Initial X:', this.initialX);
+        // console.log('currentX', currentX)
+        // console.log('distance', dx)
+        // console.log('newWidth', newWidth)
+        // this.currentColumn.style.cursor = 'col-resize';
+
     }
 
     stopColResize(e) {
 
-        e.preventDefault();
         e.stopPropagation();
-
-        console.log('stopping column resize')
+        e.preventDefault();
 
         document.removeEventListener('mousemove', this.resizeCol);
         document.removeEventListener('mouseup', this.stopColResize);
+
+        // this.currentColumn.style.cursor = 'default';
+
     }
 
     // Get list view
@@ -3510,7 +3525,7 @@ class ViewManager {
 
             this.chunk_idx = 0;
 
-            let dirents = this.files_arr; //fileOperations.dirents
+            let dirents = this.files_arr;
             let active_tab_content = document.querySelector('.active-tab-content');
 
             // console.log('running get list view', dirents)
@@ -3573,11 +3588,11 @@ class ViewManager {
 
                     // });
 
-                    // th.addEventListener('contextmenu', (e) => {
-                    //     e.preventDefault();
-                    //     e.stopPropagation();
-                    //     ipcRenderer.send('columns_menu', header);
-                    // })
+                    th.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        ipcRenderer.send('columns_menu', header);
+                    })
 
                 });
 
