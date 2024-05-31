@@ -517,6 +517,7 @@ class Utilities {
         let img = document.createElement('img');
         let video = document.createElement('video');
         let header = add_div(['header', 'item']);
+        let list_header = add_div(['item', 'list', 'list_header'])
         let href = document.createElement('a');
         let path = add_div(['path', 'item', 'hidden']);
         let mtime = add_div(['date', 'mtime', 'item', 'hidden']);
@@ -880,28 +881,43 @@ class Utilities {
 
                 if (settings.Captions[key]) {
 
+                    let col_width = '0px';
+                    if (settings['Captions Size']) {
+                        col_width = `${settings['Captions Size'][key]}px`;
+                    }
+
                     switch (key) {
+                        case 'Name':
+                            list_header.style.width = col_width;
+                            break;
                         case 'Location':
                             path.classList.remove('hidden')
                             path.append(file.location)
+                            path.style.width = col_width;
                             break;
                         case 'Modified':
                             mtime.classList.remove('hidden')
+                            mtime.style.width = col_width;
                             break;
                         case 'Created':
                             ctime.classList.remove('hidden')
+                            ctime.style.width = col_width;
                             break;
                         case 'Accessed':
                             atime.classList.remove('hidden')
+                            atime.style.width = col_width;
                             break;
                         case 'Type':
                             type.classList.remove('hidden')
+                            type.style.width = col_width;
                             break;
                         case 'Size':
                             size.classList.remove('hidden')
+                            size.style.width = col_width;
                             break;
                         case 'Count':
                             count.classList.remove('hidden')
+                            count.style.width = col_width;
                             break;
                     }
 
@@ -909,7 +925,7 @@ class Utilities {
 
             }
 
-            let list_header = add_div(['item', 'list', 'list_header'])
+            // let list_header = add_div(['item', 'list', 'list_header'])
             list_header.append(icon, header)
             // header.append(list_header);
             content.append(list_header, path, mtime, ctime, atime, type, size, count);
@@ -3395,7 +3411,7 @@ class FileOperation {
             let header = active_tab_content.querySelector('.header_row')
             if (!header) {
                 header = add_div();
-                header.classList.add('header_row', 'content', 'list', 'sticky');
+                header.classList.add('header_row', 'content', 'list');
                 header.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     e.stopPropagation()
@@ -3411,14 +3427,22 @@ class FileOperation {
                     }
                 }
 
-                // let colNames = ['Name', 'Modified', 'Size', 'Items'];
-                // let colClasses = ['name', 'date', 'size', 'items'];
                 let sort_by = '_desc'
                 let headerRow = colNames.map((colName, index) => {
 
                     let col = add_div();
                     col.classList.add('item', colClasses[index]);
                     col.append(colName);
+
+                    let drag_handle = add_div(['drag_handle']);
+                    col.append(drag_handle);
+
+                    let col_width = '150px';
+                    if (settings['Captions Size']) {
+                        col_width = `${settings['Captions Size'][colName]}px`;
+                    }
+                    col.style.width = col_width;
+
                     col.addEventListener('click', (e) => {
 
                         sort = colName.toLocaleLowerCase();

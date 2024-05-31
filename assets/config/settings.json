@@ -12,6 +12,16 @@
         "Size": true,
         "Count": true
     },
+    "Captions Size": {
+        "Name": 350,
+        "Location": 150,
+        "Modified": 100,
+        "Created": 100,
+        "Accessed": 100,
+        "Type": 50,
+        "Size": 50,
+        "Count": 50
+    },
     "File Menu": {
         "show": false
     },
