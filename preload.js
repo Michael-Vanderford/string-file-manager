@@ -3442,6 +3442,9 @@ class FileOperation {
 
                     col.addEventListener('click', (e) => {
 
+                        e.stopPropagation();
+                        e.preventDefault();
+
                         sort = colName.toLocaleLowerCase();
                         if (sort === 'name' || sort === 'modified' || sort === 'created' || sort === 'accessed') {
                             if (sort_by === '_desc') {
@@ -3460,9 +3463,7 @@ class FileOperation {
 
                     })
 
-                    drag_handle.addEventListener('mousedown', (e) => {
-                        document.style.cursor = 'grabbing';
-                    })
+                    drag_handle.addEventListener('mousedown', this.initColResize);
 
                     return col;
                 });
@@ -3687,6 +3688,53 @@ class FileOperation {
             }
 
         })
+
+    }
+
+    initColResize(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        const sidebar = document.querySelector('.sidebar');
+        this.sidebar_width = sidebar.offsetWidth;
+
+        this.currentColumn = e.target.parentElement;
+        this.initialX = e.clientX;
+        this.initialWidth = this.currentColumn.offsetWidth;
+
+        console.log('sidebar_width:', this.sidebar_width);
+        console.log('Initial X:', this.initialX);
+        console.log('Initial Width:', this.initialWidth);
+
+        document.addEventListener('mousemove', this.resizeCol);
+        document.addEventListener('mouseup', this.stopColResize);
+
+        console.log(e.target.parentElement);
+
+    }
+
+    resizeCol(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        console.log('running')
+
+        const currentX = e.clientX;
+        const dx = currentX - this.initialX //e.clientX - this.initialX;
+        const newWidth = Math.max(this.sidebar_width + dx, 50);
+        this.currentColumn.style.width = `${newWidth}px`;
+
+    }
+
+    stopColResize(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        document.removeEventListener('mousemove', this.resizeCol);
+        document.removeEventListener('mouseup', this.stopColResize);
 
     }
 
@@ -7190,6 +7238,9 @@ window.addEventListener('DOMContentLoaded', (e) => {
         // Function to handle the resize action
         function startResize(e) {
 
+            e.stopPropagation();
+            e.preventDefault();
+
             // Get the initial mouse position
             const initialMousePos = e.clientX;
 
@@ -7205,6 +7256,7 @@ window.addEventListener('DOMContentLoaded', (e) => {
 
             // Function to handle the resizing logic
             function resize(e) {
+
                 // Calculate the distance moved by the mouse
                 const distanceMoved = e.clientX - initialMousePos;
 
@@ -7221,7 +7273,10 @@ window.addEventListener('DOMContentLoaded', (e) => {
             }
 
             // Function to stop the resizing action
-            function stopResize() {
+            function stopResize(e) {
+
+                e.stopPropagation();
+                e.preventDefault();
 
                 document.removeEventListener("mousemove", resize);
                 document.removeEventListener("mouseup", stopResize);
