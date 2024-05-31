@@ -517,7 +517,6 @@ class Utilities {
         let img = document.createElement('img');
         let video = document.createElement('video');
         let header = add_div(['header', 'item']);
-        let list_header = add_div(['item', 'list', 'list_header'])
         let href = document.createElement('a');
         let path = add_div(['path', 'item', 'hidden']);
         let mtime = add_div(['date', 'mtime', 'item', 'hidden']);
@@ -881,43 +880,30 @@ class Utilities {
 
                 if (settings.Captions[key]) {
 
-                    let col_width = '0px';
-                    if (settings['Captions Size']) {
-                        col_width = `${settings['Captions Size'][key]}px`;
-                    }
-
                     switch (key) {
-                        case 'Name':
-                            list_header.style.width = col_width;
+                        case "Name":
                             break;
                         case 'Location':
                             path.classList.remove('hidden')
                             path.append(file.location)
-                            path.style.width = col_width;
                             break;
                         case 'Modified':
                             mtime.classList.remove('hidden')
-                            mtime.style.width = col_width;
                             break;
                         case 'Created':
                             ctime.classList.remove('hidden')
-                            ctime.style.width = col_width;
                             break;
                         case 'Accessed':
                             atime.classList.remove('hidden')
-                            atime.style.width = col_width;
                             break;
                         case 'Type':
                             type.classList.remove('hidden')
-                            type.style.width = col_width;
                             break;
                         case 'Size':
                             size.classList.remove('hidden')
-                            size.style.width = col_width;
                             break;
                         case 'Count':
                             count.classList.remove('hidden')
-                            count.style.width = col_width;
                             break;
                     }
 
@@ -925,7 +911,7 @@ class Utilities {
 
             }
 
-            // let list_header = add_div(['item', 'list', 'list_header'])
+            let list_header = add_div(['item', 'list', 'list_header'])
             list_header.append(icon, header)
             // header.append(list_header);
             content.append(list_header, path, mtime, ctime, atime, type, size, count);
@@ -3411,7 +3397,7 @@ class FileOperation {
             let header = active_tab_content.querySelector('.header_row')
             if (!header) {
                 header = add_div();
-                header.classList.add('header_row', 'content', 'list');
+                header.classList.add('header_row', 'content', 'list', 'sticky');
                 header.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     e.stopPropagation()
@@ -3427,23 +3413,15 @@ class FileOperation {
                     }
                 }
 
+                // let colNames = ['Name', 'Modified', 'Size', 'Items'];
+                // let colClasses = ['name', 'date', 'size', 'items'];
                 let sort_by = '_desc'
                 let headerRow = colNames.map((colName, index) => {
 
-                    let col = add_div(['item', colClasses[index]]);
-                    let drag_handle = add_div(['drag_handle']);
-                    col.append(colName, drag_handle);
-
-                    let col_width = '150px';
-                    if (settings['Captions Size']) {
-                        col_width = `${settings['Captions Size'][colName]}px`;
-                    }
-                    col.style.width = col_width;
-
+                    let col = add_div();
+                    col.classList.add('item', colClasses[index]);
+                    col.append(colName);
                     col.addEventListener('click', (e) => {
-
-                        e.stopPropagation();
-                        e.preventDefault();
 
                         sort = colName.toLocaleLowerCase();
                         if (sort === 'name' || sort === 'modified' || sort === 'created' || sort === 'accessed') {
@@ -3462,8 +3440,6 @@ class FileOperation {
                         sort_cards();
 
                     })
-
-                    drag_handle.addEventListener('mousedown', this.initColResize);
 
                     return col;
                 });
@@ -3688,53 +3664,6 @@ class FileOperation {
             }
 
         })
-
-    }
-
-    initColResize(e) {
-
-        e.stopPropagation();
-        e.preventDefault();
-
-        const sidebar = document.querySelector('.sidebar');
-        this.sidebar_width = sidebar.offsetWidth;
-
-        this.currentColumn = e.target.parentElement;
-        this.initialX = e.clientX;
-        this.initialWidth = this.currentColumn.offsetWidth;
-
-        console.log('sidebar_width:', this.sidebar_width);
-        console.log('Initial X:', this.initialX);
-        console.log('Initial Width:', this.initialWidth);
-
-        document.addEventListener('mousemove', this.resizeCol);
-        document.addEventListener('mouseup', this.stopColResize);
-
-        console.log(e.target.parentElement);
-
-    }
-
-    resizeCol(e) {
-
-        e.stopPropagation();
-        e.preventDefault();
-
-        console.log('running')
-
-        const currentX = e.clientX;
-        const dx = currentX - this.initialX //e.clientX - this.initialX;
-        const newWidth = Math.max(this.sidebar_width + dx, 50);
-        this.currentColumn.style.width = `${newWidth}px`;
-
-    }
-
-    stopColResize(e) {
-
-        e.stopPropagation();
-        e.preventDefault();
-
-        document.removeEventListener('mousemove', this.resizeCol);
-        document.removeEventListener('mouseup', this.stopColResize);
 
     }
 
@@ -7238,9 +7167,6 @@ window.addEventListener('DOMContentLoaded', (e) => {
         // Function to handle the resize action
         function startResize(e) {
 
-            e.stopPropagation();
-            e.preventDefault();
-
             // Get the initial mouse position
             const initialMousePos = e.clientX;
 
@@ -7256,7 +7182,6 @@ window.addEventListener('DOMContentLoaded', (e) => {
 
             // Function to handle the resizing logic
             function resize(e) {
-
                 // Calculate the distance moved by the mouse
                 const distanceMoved = e.clientX - initialMousePos;
 
@@ -7273,10 +7198,7 @@ window.addEventListener('DOMContentLoaded', (e) => {
             }
 
             // Function to stop the resizing action
-            function stopResize(e) {
-
-                e.stopPropagation();
-                e.preventDefault();
+            function stopResize() {
 
                 document.removeEventListener("mousemove", resize);
                 document.removeEventListener("mouseup", stopResize);
