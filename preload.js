@@ -3430,12 +3430,9 @@ class FileOperation {
                 let sort_by = '_desc'
                 let headerRow = colNames.map((colName, index) => {
 
-                    let col = add_div();
-                    col.classList.add('item', colClasses[index]);
-                    col.append(colName);
-
+                    let col = add_div(['item', colClasses[index]]);
                     let drag_handle = add_div(['drag_handle']);
-                    col.append(drag_handle);
+                    col.append(colName, drag_handle);
 
                     let col_width = '150px';
                     if (settings['Captions Size']) {
@@ -3461,6 +3458,10 @@ class FileOperation {
 
                         sort_cards();
 
+                    })
+
+                    drag_handle.addEventListener('mousedown', (e) => {
+                        document.style.cursor = 'grabbing';
                     })
 
                     return col;
