@@ -3253,6 +3253,15 @@ class FileOperation {
         this.location = document.querySelector('.location')
         this.cut_flag = 0;
 
+        this.currentColumn = null;
+        this.initialX = 0;
+        this.initialWidth = 0;
+        this.sidebar_width = 0;
+
+        this.initColResize = this.initColResize.bind(this);
+        this.resizeCol = this.resizeCol.bind(this);
+        this.stopColResize = this.stopColResize.bind(this);
+
         // On ls - Get Directory
         // ipcRenderer.on('ls', (e, dirents, source, tab) => {
         ipcRenderer.on('ls', (e, data) => {

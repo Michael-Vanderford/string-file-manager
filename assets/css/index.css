@@ -963,17 +963,17 @@ th {
 }
 
 .header_row .size {
-    width: 50px !important;
+    /* width: 50px !important; */
     /* text-align: right; */
 }
 
 .header_row .count {
-    width: 50px !important;
+    /* width: 50px !important; */
     /* text-align: right; */
 }
 
 .header_row .items {
-    margin-right: 15px;
+    /* margin-right: 15px; */
     /* text-align: right; */
 }
 
@@ -991,7 +991,7 @@ th {
 }
 
 .grid1 .size {
-    width: 50PX !important;
+    /* width: 50PX !important; */
     /* text-align: right; */
 }
 
@@ -1001,7 +1001,7 @@ th {
 }
 
 .grid1 .count {
-    width: 50px !important;
+    /* width: 50px !important; */
     /* text-align: right; */
 }
 
