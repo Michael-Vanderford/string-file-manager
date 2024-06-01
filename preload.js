@@ -3681,11 +3681,54 @@ class FileOperation {
 
     }
 
-    initColResize (e) {
+    initColResize(e) {
 
-        // get parent column from event target
-        const col = e.target.parentElement;
-        
+        e.stopPropagation();
+        e.preventDefault();
+
+        const sidebar = document.querySelector('.sidebar');
+        this.sidebar_width = sidebar.offsetWidth;
+
+        this.currentColumn = e.target.parentElement;
+        this.initialX = e.clientX;
+        this.initialWidth = this.currentColumn.offsetWidth;
+
+        console.log('sidebar_width:', this.sidebar_width);
+        console.log('Initial X:', this.initialX);
+        console.log('Initial Width:', this.initialWidth);
+
+        document.addEventListener('mousemove', this.resizeCol);
+        document.addEventListener('mouseup', this.stopColResize);
+
+    }
+
+    resizeCol(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        const currentX = e.clientX;
+        const dx = currentX - this.initialX //e.clientX - this.initialX;
+        const newWidth = Math.max(this.sidebar_width + dx, 50);
+        this.currentColumn.style.width = `${newWidth}px`;
+
+        // console.log('Initial X:', this.initialX);
+        // console.log('currentX', currentX)
+        // console.log('distance', dx)
+        // console.log('newWidth', newWidth)
+        // this.currentColumn.style.cursor = 'col-resize';
+
+    }
+
+    stopColResize(e) {
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        document.removeEventListener('mousemove', this.resizeCol);
+        document.removeEventListener('mouseup', this.stopColResize);
+
+        // this.currentColumn.style.cursor = 'default';
 
     }
 
