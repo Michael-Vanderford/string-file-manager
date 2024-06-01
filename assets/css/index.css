@@ -828,24 +828,24 @@ th {
 .list .item:nth-child(1) {
     /* background-color: red; */
     /* min-width: 350px; */
-    min-width: 30%;
+    /* min-width: 30%; */
 }
 
 .list .item {
     flex-grow: 1;
-    /* border: 1px solid var(--border); */
-    width: 15%;
+    border: 1px solid var(--border);
+    /* width: 15%; */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .list .item.size {
-    width: 100px;
+    /* width: 100px; */
 }
 
 .list .item.count {
-    width: 100px;
+    /* width: 100px; */
 }
 
 .table {
@@ -930,7 +930,7 @@ th {
 
 .header_row .item {
     font-weight: bold;
-    flex-grow: 1;
+    /* flex-grow: 1; */
     height: 100%;
     /* padding: 2px; */
     /* border-right: 1px solid #ccc; */
@@ -941,7 +941,7 @@ th {
     border: 1px solid var(--border);
     width: 5px;
     height: 100%;
-    float: left;
+    float: right;
 }
 
 .header_row .col_drag_handle:hover {
@@ -987,7 +987,7 @@ th {
 
 .grid1 .date {
     /* width: 16%; */
-    text-align: left;
+    /* text-align: left; */
 }
 
 .grid1 .size {

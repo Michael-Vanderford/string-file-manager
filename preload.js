@@ -3724,7 +3724,7 @@ class FileOperation {
         // console.log('Initial X:', this.initialX);
         // console.log('currentX', currentX)
         // console.log('distance', dx)
-        // console.log('newWidth', newWidth)
+        console.log('newWidth', newWidth, this.currentColumn)
         // this.currentColumn.style.cursor = 'col-resize';
 
     }
