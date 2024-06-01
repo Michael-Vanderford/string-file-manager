@@ -931,9 +931,21 @@ th {
 .header_row .item {
     font-weight: bold;
     flex-grow: 1;
+    height: 100%;
     /* padding: 2px; */
     /* border-right: 1px solid #ccc; */
     /* width: 15%; */
+}
+
+.header_row .col_drag_handle {
+    border: 1px solid var(--border);
+    width: 5px;
+    height: 100%;
+    float: left;
+}
+
+.header_row .col_drag_handle:hover {
+    cursor: ew-resize;
 }
 
 .header_row .item:hover {

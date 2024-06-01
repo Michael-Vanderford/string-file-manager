@@ -2964,10 +2964,15 @@ class ViewManager {
 
                         // Handle column headers for list view
                         for (const key in settings.Captions) {
+
+                            // let col_size = settings['Captions Size'][key] ? 1 : 0;
+                            // console.log('col_size', col_size)
+
                             if (settings.Captions[key]) {
                                 if (key === 'Location') {
                                     let path = card.querySelector('.path');
                                     path.classList.remove('hidden');
+                                    // path.style.width = col_size;
                                 }
                                 if (key === 'Modified') {
                                     let mtime = card.querySelector('.mtime');
@@ -3420,7 +3425,14 @@ class FileOperation {
 
                     let col = add_div();
                     col.classList.add('item', colClasses[index]);
-                    col.append(colName);
+
+                    const drag_handle = add_div(['col_drag_handle']);
+                    let col_width = settings['Captions Size'][colName] ? settings['Captions Size'][colName] : 0;
+
+                    col.style.width = `${col_width}px`;
+                    console.log('col width', col_width)
+
+                    col.append(colName, drag_handle);
                     col.addEventListener('click', (e) => {
 
                         sort = colName.toLocaleLowerCase();
@@ -3440,6 +3452,8 @@ class FileOperation {
                         sort_cards();
 
                     })
+
+                    col.addEventListener('mousedown', this.initColResize);
 
                     return col;
                 });
@@ -3664,6 +3678,14 @@ class FileOperation {
             }
 
         })
+
+    }
+
+    initColResize (e) {
+
+        // get parent column from event target
+        const col = e.target.parentElement;
+        
 
     }
 
