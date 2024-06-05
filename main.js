@@ -2274,7 +2274,7 @@ function createWindow() {
 };
 
 process.on('uncaughtException', (err) => {
-    console.log('Uncaught Exception', err.message)
+    // console.log('Uncaught Exception', err.message)
     // win.send('msg', error.message);
 })
 

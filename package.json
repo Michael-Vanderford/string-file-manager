@@ -17,7 +17,8 @@
     "build": {
         "appId": "com.stringboardsoftware.stringfilemanager",
         "linux": {
-            "target": "deb"
+            "target": ["deb"],
+            "executableName": "sfm"
         }
     },
     "keywords": [

@@ -41,11 +41,13 @@ body {
     /* position: relative; */
     /* background: linear-gradient(to right, var(--main), var(--menu)); */
     background: var(--main);
+    border: 1px solid var(--border);
     border-radius: 5px;
     width: 100%;
     height: 100vh;
     justify-content: space-around;
     z-index: 1;
+    overflow: auto;
 }
 
 /* .main:focus {
@@ -53,14 +55,14 @@ body {
     border: none;
 } */
 
-.tab-container {
-    border: 1px solid var(--border);
-    width: 90%;
-    height: 100%;
+/* .tab-container { */
+    /* border: 1px solid var(--border); */
+    /* width: 90%; */
+    /* height: 100%; */
     /* background: var(--sidebar); */
     /* width: 500px; */
     /* height: 100%; */
-}
+/* } */
 
 .tab-content {
     padding: 10px;
@@ -149,7 +151,17 @@ body {
     user-select: none;
 }
 
-.list_view table {
+.list_view_table.pre {
+    /* opacity: 0; */
+}
+
+.list_view_table.post {
+    /* border: 1px solid red; */
+    opacity: 1;
+    transition: opacity 2.5s ease-in-out;
+}
+
+.list_view_table {
     table-layout: fixed;
     width: 100%;
     border-spacing: 0 8px;
@@ -173,28 +185,18 @@ body {
     right: 0;
     top: 0;
     height: 100%;
-    width: 5px;
+    width: 2px;
     border-right: 1px solid var(--border);
-    background-color: var(--main);
+    /* background-color: red; */
     cursor: col-resize;
+}
+
+.list_view .th_drag_handle:hover {
+    background-color: #3794ff !important;
 }
 
 .list_view th:last-child .th_drag_handle {
     display: none;
-}
-
-.list_view .tr {
-    /* opacity: 1; */
-}
-
-.list_view .tr.new_tr {
-    /* opacity: 0; */
-    /* transition: opacity 1.5s ease-in-out; */
-}
-
-/* Empty row to add spacing on highlight */
-.list_view .tr1 {
-    height: 5px;
 }
 
 .list_view .table_body {
@@ -202,80 +204,32 @@ body {
 }
 
 .list_view .tbody_new {
-    opacity: 0;
-    transition: opacity 1.5s ease-in-out;
-}
-
-.list_view td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 2px;
-    padding-left: 5px;
-}
-
-.list_view td:first-child {
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
-}
-
-.list_view td:last-child {
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
-}
-
-.list_view th.name {
-    /* width: 350px; */
-}
-
-.list_view .name {
-    align-items: center;
-}
-
-.list_view .display_name {
-    width: 90%;
-}
-
-.display_name a {
-    outline: none;
-}
-
-.list_view a {
-    padding: 2px;
-    color: var(--text);
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width:100%;
-}
-
-.list_view .input {
-    width: 100%;
+    /* opacity: 0; */
+    /* transition: opacity 1.5s ease-in-out; */
 }
 
 .list_view th.location {
-    max-width: 150px;
+    /* max-width: 150px; */
     /* width: 15%; */
 }
 
 .list_view th.modified {
-    max-width: 150px;
+    /* max-width: 150px; */
     /* width: 15%; */
 }
 
 .list_view th.created {
-    max-width: 150px;
+    /* max-width: 150px; */
     /* width: 15%; */
 }
 
 .list_view th.accessed{
-    max-width: 150px;
+    /* max-width: 150px; */
     /* width: 15%; */
 }
 
 .list_view th.type {
-    max-width: 50px;
+    /* max-width: 50px; */
     /* width: 15%; */
 }
 
@@ -288,11 +242,55 @@ body {
 }
 
 .list_view td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px;
+    padding-left: 5px;
     vertical-align: middle;
+    height: 30px !important;
 }
 
+.list_view td:first-child {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.list_view td:last-child {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.list_view td .icon_div:hover {
+    cursor: pointer;
+}
+
+/* Contaoner */
 .list_view td .name {
     display: flex;
+    align-items: center;
+}
+
+.list_view td .display_name {
+    width: 90%;
+}
+
+.list_view td .display_name a {
+    outline: none;
+}
+
+.list_view td a {
+    padding: 2px;
+    color: var(--text);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width:100%;
+}
+
+.list_view td .input {
+    width: 100%;
 }
 
 /* Progress input */
@@ -501,15 +499,6 @@ th {
     cursor: pointer;
     border-radius: 5px;
     background-color: var(--highlight);
-}
-
-.active-tab-content::-webkit-scrollbar {
-    background: var(--input);
-    width: 8px;
-}
-
-.active-tab-content::-webkit-scrollbar-track {
-    background: var(--location);
 }
 
 #main a {
@@ -757,14 +746,23 @@ th {
 }
 
 .active-tab-content {
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: auto;
-    /* border:1px solid red !important; */
     box-sizing: border-box;
     border: none;
     outline: none;
     height: 95%;
     width: 100%;
+}
+
+.active-tab-content::-webkit-scrollbar {
+    background: var(--input);
+    width: 6px;
+    height: 6px;
+}
+
+.active-tab-content::-webkit-scrollbar-track {
+    background: var(--main);
 }
 
 /* css is in merge.html */
@@ -1001,7 +999,7 @@ th {
 .list .item {
     flex-grow: 1;
     /* border: 1px solid var(--border); */
-    width: 15%;
+    /* width: 15%; */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

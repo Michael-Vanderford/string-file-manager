@@ -2788,10 +2788,15 @@ class ViewManager {
 
     constructor() {
 
+        console.log('running view manager')
+
         this.files_arr = [];
 
         // console.log('running view manager')
         window.addEventListener('resize', this.resize);
+
+        // get main container
+        this.container = document.querySelector('.container');
 
         // this.utils = new Utilities();
         this.view = localStorage.getItem('view');
@@ -2808,6 +2813,12 @@ class ViewManager {
         this.initialX = 0;
         this.initialWidth = 0;
         this.sidebar_width = 0;
+        this.nextColumn = null;
+
+        this.startX = 0;
+        this.startWidth = 0;
+
+        this.isResizing = false;
 
         this.initColResize = this.initColResize.bind(this);
         this.resizeCol = this.resizeCol.bind(this);
@@ -3422,6 +3433,21 @@ class ViewManager {
 
         });
 
+        icon_div.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (is_dir) {
+                if (e.ctrlKey) {
+                    this.getView(file['href'], 1);
+                } else {
+                    this.getView(file['href']);
+                }
+                tabManager.addTabHistory(file['href']);
+            } else {
+                ipcRenderer.send('open', file['href']);
+            }
+        })
+
         // add event listener to link
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -3470,19 +3496,14 @@ class ViewManager {
         e.stopPropagation();
         e.preventDefault();
 
-        const sidebar = document.querySelector('.sidebar');
-        this.sidebar_width = sidebar.offsetWidth;
-
         this.currentColumn = e.target.parentElement;
-        this.initialX = e.clientX;
-        this.initialWidth = this.currentColumn.offsetWidth;
-
-        console.log('sidebar_width:', this.sidebar_width);
-        console.log('Initial X:', this.initialX);
-        console.log('Initial Width:', this.initialWidth);
+        this.startX = e.pageX;
+        this.startWidth = this.currentColumn.offsetWidth;
 
         document.addEventListener('mousemove', this.resizeCol);
         document.addEventListener('mouseup', this.stopColResize);
+
+        this.isResizing = false;
 
     }
 
@@ -3491,16 +3512,18 @@ class ViewManager {
         e.stopPropagation();
         e.preventDefault();
 
-        const currentX = e.clientX;
-        const dx = currentX - this.initialX //e.clientX - this.initialX;
-        const newWidth = Math.max(this.sidebar_width + dx, 50);
+        const newWidth = this.startWidth + (e.pageX - this.startX);
         this.currentColumn.style.width = `${newWidth}px`;
 
-        // console.log('Initial X:', this.initialX);
-        // console.log('currentX', currentX)
-        // console.log('distance', dx)
-        // console.log('newWidth', newWidth)
-        // this.currentColumn.style.cursor = 'col-resize';
+        this.isResizing = true;
+        console.log('resizing', this.isResizing, newWidth)
+
+        this.currentColumn.style.cursor = 'col-resize';
+
+        // if (newWidth > 50 && (!this.nextColumn || nextNewWidth > 50)) {
+        //     this.currentColumn.style.width = `${newWidth}px`;
+        //     if (this.nextColumn) this.nextColumn.style.width = `${nextNewWidth}px`;
+        // }
 
     }
 
@@ -3509,10 +3532,16 @@ class ViewManager {
         e.stopPropagation();
         e.preventDefault();
 
+        this.currentColumn.style.cursor = 'default';
+
+        // if (this.isResizing) {
+        //     this.isResizing = false;
+        //     console.log('resizing stopped', this.isResizing)
+        //     e.stopImmediatePropagation();
+        // }
+
         document.removeEventListener('mousemove', this.resizeCol);
         document.removeEventListener('mouseup', this.stopColResize);
-
-        // this.currentColumn.style.cursor = 'default';
 
     }
 
@@ -3541,6 +3570,13 @@ class ViewManager {
                 (caption) => settings.Captions[caption] === true
             );
 
+            let list_view_table = document.querySelector('.list_view_table');
+            if (list_view_table) {
+                list_view_table.classList.add('pre');
+            }
+
+            console.log('list_view_table', list_view_table)
+
             // check if th exists
             let th = active_tab_content.querySelector("thead");
             if (!th) {
@@ -3548,6 +3584,13 @@ class ViewManager {
                 // add div to hold data
                 let list_container = add_div();
                 list_container.innerHTML = data;
+
+                list_view_table = list_container.querySelector('.list_view_table');
+                if (list_view_table) {
+                    list_view_table.classList.add('pre');
+                }
+
+                console.log('list_view_table', list_view_table)
 
                 // load table
                 active_tab_content.append(list_container);
@@ -3564,6 +3607,7 @@ class ViewManager {
                     th.textContent = header;
                     th.classList.add(header.toLocaleLowerCase());
 
+                    // drag / resize columns
                     const drag_handle = add_div(['th_drag_handle']);
                     th.prepend(drag_handle);
 
@@ -3572,21 +3616,30 @@ class ViewManager {
 
                     drag_handle.addEventListener('mousedown', this.initColResize)
 
-                    // // sort by header
-                    // th.addEventListener('click', (e) => {
+                    // sort by header
 
-                    //     e.preventDefault();
-                    //     e.stopPropagation();
+                    th.addEventListener('click', (e) => {
 
-                    //     // sort by column
-                    //     sort_order = sort_order === 'asc' ? 'desc' : 'asc';
+                        if (this.isResizing) {
 
-                    //     settings.Sort.by = header.toLocaleLowerCase();
-                    //     settings.Sort.order = sort_order;
-                    //     ipcRenderer.send('save_settings', settings);
-                    //     this.getListView();
+                            console.log('sorting by column', header, this.isResizing)
 
-                    // });
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            e.stopPropagation();
+
+                            // sort by column
+                            sort_order = sort_order === 'asc' ? 'desc' : 'asc';
+
+                            settings.Sort.by = header.toLocaleLowerCase();
+                            settings.Sort.order = sort_order;
+                            ipcRenderer.send('save_settings', settings);
+                            this.getListView();
+
+                        }
+
+                    });
+
 
                     th.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
@@ -3614,7 +3667,7 @@ class ViewManager {
 
             // filter hidden files
             // console.log(settings)
-            if (settings['Hidden Files'].show === false) {
+            if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
                 dirents = dirents.filter((dirent) => !dirent.is_hidden);
             }
 
@@ -3636,12 +3689,15 @@ class ViewManager {
             this.files_arr.forEach((file) => {
                 let tr = this.getTableRow(file)
                 tbody.appendChild(tr);
-                tr.classList.remove('new_tr');
+                // tr.classList.remove('new_tr');
             });
 
             // this.chunk_load();
-
             tbody.classList.remove('tbody_new');
+            if (list_view_table) {
+                // list_view_table.classList.remove('pre');
+                list_view_table.classList.add('post');
+            }
 
             // active_tab_content.addEventListener('scroll', (e) => {
             //     console.log('scrolling')
@@ -3775,10 +3831,10 @@ class ViewManager {
 
         dirents_arr.forEach(arr => {
 
-            // const sort = localStorage.getItem('sort');
-            // console.log(sort);
-
-            let sort = `${settings.Sort["by"]}_${settings.Sort["order"]}`;
+            // console.log(settings)
+            const { Sort: { by, order } } = settings;
+            const sort = `${by}_${order}`;
+            // let sort = `${settings.Sort["by"]}_${settings.Sort["order"]}`;
 
             switch (sort) {
                 case 'name_asc': {
