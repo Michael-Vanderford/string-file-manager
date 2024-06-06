@@ -2809,12 +2809,13 @@ class ViewManager {
         this.chunk_size = 20;
         this.chunk_idx = 0;
 
-        this.currentColumn = null;
         this.initialX = 0;
         this.initialWidth = 0;
         this.sidebar_width = 0;
         this.nextColumn = null;
 
+        this.currentColumn = null;
+        this.dragHandle = null;
         this.startX = 0;
         this.startWidth = 0;
 
@@ -3496,6 +3497,7 @@ class ViewManager {
         e.stopPropagation();
         e.preventDefault();
 
+        this.dragHandle = e.target;
         this.currentColumn = e.target.parentElement;
         this.startX = e.pageX;
         this.startWidth = this.currentColumn.offsetWidth;
@@ -3503,22 +3505,30 @@ class ViewManager {
         document.addEventListener('mousemove', this.resizeCol);
         document.addEventListener('mouseup', this.stopColResize);
 
-        this.isResizing = false;
+        this.isResizing = true;
 
     }
 
     resizeCol(e) {
 
-        e.stopPropagation();
-        e.preventDefault();
+        if (this.isResizing) {
 
-        const newWidth = this.startWidth + (e.pageX - this.startX);
-        this.currentColumn.style.width = `${newWidth}px`;
+            requestAnimationFrame(() => {
 
-        this.isResizing = true;
-        console.log('resizing', this.isResizing, newWidth)
+                e.stopPropagation();
+                e.preventDefault();
 
-        this.currentColumn.style.cursor = 'col-resize';
+                const newWidth = this.startWidth + (e.pageX - this.startX);
+                this.dragHandle.parentElement.style.width = `${newWidth}px`;
+
+                this.isResizing = true;
+                console.log('resizing', this.isResizing, newWidth)
+
+                this.currentColumn.style.cursor = 'col-resize';
+
+            });
+
+        }
 
         // if (newWidth > 50 && (!this.nextColumn || nextNewWidth > 50)) {
         //     this.currentColumn.style.width = `${newWidth}px`;
@@ -3529,19 +3539,24 @@ class ViewManager {
 
     stopColResize(e) {
 
-        e.stopPropagation();
-        e.preventDefault();
+        // e.stopPropagation();
+        // e.preventDefault();
 
-        this.currentColumn.style.cursor = 'default';
+        if (this.isResizing) {
 
-        // if (this.isResizing) {
-        //     this.isResizing = false;
-        //     console.log('resizing stopped', this.isResizing)
-        //     e.stopImmediatePropagation();
-        // }
+            this.currentColumn.style.cursor = 'default';
+            this.isResizing = false;
 
-        document.removeEventListener('mousemove', this.resizeCol);
-        document.removeEventListener('mouseup', this.stopColResize);
+            // if (this.isResizing) {
+            //     this.isResizing = false;
+            //     console.log('resizing stopped', this.isResizing)
+            //     e.stopImmediatePropagation();
+            // }
+
+            document.removeEventListener('mousemove', this.resizeCol);
+            document.removeEventListener('mouseup', this.stopColResize);
+
+        }
 
     }
 
@@ -3565,10 +3580,12 @@ class ViewManager {
             //     utilities.removeEmptyFolderMsg();
             // }
 
-            // column headers array
-            const columnHeaders = Object.keys(settings.Captions).filter(
-                (caption) => settings.Captions[caption] === true
-            );
+            // // column headers array
+            // const columnHeaders = Object.keys(settings.Captions).filter(
+            //     (caption) => settings.Captions[caption] === true
+            // );
+
+            const columnHeaders = Object.keys(settings.Captions)
 
             let list_view_table = document.querySelector('.list_view_table');
             if (list_view_table) {
@@ -3603,14 +3620,19 @@ class ViewManager {
                 const headerRow = document.createElement("tr");
                 columnHeaders.forEach((header) => {
 
+                    // // check if header is enabled
+                    if (settings['Captions'][header] === true) {
+
+
+
                     const th = document.createElement("th");
                     th.textContent = header;
                     th.classList.add(header.toLocaleLowerCase());
 
                     // drag / resize columns
                     const drag_handle = add_div(['th_drag_handle']);
-                    th.prepend(drag_handle);
 
+                    th.prepend(drag_handle);
                     headerRow.appendChild(th);
                     th.style.width = `${settings['Captions Size'][header]}px`;
 
@@ -3646,6 +3668,10 @@ class ViewManager {
                         e.stopPropagation();
                         ipcRenderer.send('columns_menu', header);
                     })
+
+                    } else {
+
+                    }
 
                 });
 
@@ -3687,6 +3713,7 @@ class ViewManager {
             // populate data
             // fileOperations.dirents.forEach((file) => {
             this.files_arr.forEach((file) => {
+                
                 let tr = this.getTableRow(file)
                 tbody.appendChild(tr);
                 // tr.classList.remove('new_tr');

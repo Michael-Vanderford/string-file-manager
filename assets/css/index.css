@@ -40,6 +40,7 @@ body {
 .main {
     /* position: relative; */
     /* background: linear-gradient(to right, var(--main), var(--menu)); */
+    flex-grow: 1;
     background: var(--main);
     border: 1px solid var(--border);
     border-radius: 5px;
@@ -66,6 +67,7 @@ body {
 
 .tab-content {
     padding: 10px;
+    padding-top: 0;
 }
 
 .tabs {
@@ -162,6 +164,7 @@ body {
 }
 
 .list_view_table {
+    position: relative;
     table-layout: fixed;
     width: 100%;
     border-spacing: 0 8px;
@@ -171,13 +174,14 @@ body {
 .list_view th {
     height: 23px;
     position: sticky;
-    top: -10px;
+    top: 0;
     padding-bottom: 4px;
     padding-left: 5px;
     background: var(--main);
     border-bottom: 1px solid var(--border);
     z-index: 1;
     cursor: pointer;
+    user-select: none;
 }
 
 .list_view .th_drag_handle {
