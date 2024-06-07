@@ -3696,6 +3696,7 @@ class ViewManager {
             if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
                 dirents = dirents.filter((dirent) => !dirent.is_hidden);
             }
+            
 
             dirents.sort((a, b) => {
                 if (a.is_dir && !b.is_dir) {
@@ -3713,7 +3714,7 @@ class ViewManager {
             // populate data
             // fileOperations.dirents.forEach((file) => {
             this.files_arr.forEach((file) => {
-                
+
                 let tr = this.getTableRow(file)
                 tbody.appendChild(tr);
                 // tr.classList.remove('new_tr');
