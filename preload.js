@@ -1301,8 +1301,6 @@ class Utilities {
     initFilterListener() {
         // filter / quick search
         document.addEventListener('keydown', (e) => {
-            this.filter.focus();
-            // e.stopPropagation();
             this.filterFiles(e);
         });
     }
@@ -1315,7 +1313,7 @@ class Utilities {
 
         // if (document.activeElement.tagName.toLowerCase() !== 'input') {
 
-            if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.key === 'Tab') {
                 if (e.ctrlKey && e.key.toLocaleLowerCase() === 'l') {
                     this.location.focus();
                 }
@@ -1326,6 +1324,7 @@ class Utilities {
                 // filter anything that is not a letter or number
                 let c = 0;
                 if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
+                    this.filter.focus();
                     is_quick_search = 1;
                     this.quick_search_sting += e.key;
                     // let cards = active_tab_content.querySelectorAll('.card, .tr');
