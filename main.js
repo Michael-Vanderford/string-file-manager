@@ -202,9 +202,11 @@ class SettingsManager {
 
     constructor() {
 
+        // init settings
         this.settings = {};
         this.settings_file = path.join(app.getPath('userData'), 'settings.json');
 
+        // init window settings
         this.window_file = path.join(app.getPath('userData'), 'window.json');
         this.window_settings = {
             window: {
@@ -215,9 +217,23 @@ class SettingsManager {
             }
         };
 
+        // init list view settings
+        this.list_view_file = path.join(app.getPath('userData'), 'list_view.json');
+        this.list_view_settings = {};
+
         ipcMain.on('show_menubar', (e) => {
             this.getSettings();
             this.showMenubar();
+        })
+
+        // return list view settings
+        ipcMain.handle('get_list_view_settings', (e) => {
+            return this.getListViewSetting();
+        })
+
+        // update list view settings
+        ipcMain.on('update_list_view_settings', (e, list_view_settings) => {
+            this.updateListViewSettingSettings(list_view_settings);
         })
 
     }
@@ -282,6 +298,7 @@ class SettingsManager {
         }
     }
 
+    // window settings
     getWindowSetting() {
         try {
             this.window_settings = JSON.parse(fs.readFileSync(this.window_file, 'utf-8'));
@@ -294,6 +311,21 @@ class SettingsManager {
     updateWindowSettings(window_settings) {
         this.window_settings = window_settings;
         fs.writeFileSync(this.window_file, JSON.stringify(this.window_settings, null, 4));
+    }
+
+    // list view settings
+    getListViewSetting() {
+        try {
+            this.list_view_settings = JSON.parse(fs.readFileSync(this.list_view_file, 'utf-8'));
+        } catch (err) {
+            fs.writeFileSync(this.list_view_file, JSON.stringify(this.list_view_settings, null, 4));
+        }
+        return this.list_view_settings;
+    }
+
+    updateListViewSettingSettings(list_view_settings) {
+        this.list_view_settings = list_view_settings;
+        fs.writeFileSync(this.list_view_file, JSON.stringify(this.list_view_settings, null, 4));
     }
 
 }

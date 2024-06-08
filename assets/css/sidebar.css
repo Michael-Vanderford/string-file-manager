@@ -1,18 +1,12 @@
 
 .sidebar {
-    /* font-size: 14px; */
-    /* line-height: 18px; */
-    /* overflow-y: auto; */
     border-right: 1px solid var(--border);
     position: relative;
     box-sizing: border-box;
     background-color: var(--sidebar);
-    /* background: linear-gradient(to right, var(--sidebar), var(--main)); */
     color: var(--text);
     padding-left: 10px;
     padding-right: 10px;
-    /* height: 90%; */
-    /* width: 300px; */
 }
 
 .sidebar .header {
@@ -45,14 +39,12 @@
 }
 
 .sb_view {
-    /* border: 1px solid var(--border); */
     /* border: 1px solid green; */
-    /* background-color: var(--main); */
+    box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
     margin-top: 5px;
     height: 90%;
-    /* padding-bottom: 20px; */
 }
 
 .sb_view .item.active {

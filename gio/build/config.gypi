@@ -405,16 +405,6 @@
     "want_separate_host_toolset": 1,
     "nodedir": "/home/michael/.cache/node-gyp/26.2.2",
     "standalone_static_library": 1,
-    "target": "26.2.2",
-    "user_agent": "npm/10.5.0 node/v20.12.2 linux x64 workspaces/false",
-    "userconfig": "/home/michael/.npmrc",
-    "local_prefix": "/home/michael/source/repos/string-file-manager/gio",
-    "prefix": "/usr/local",
-    "npm_version": "10.5.0",
-    "cache": "/home/michael/.npm",
-    "node_gyp": "/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
-    "globalconfig": "/usr/local/etc/npmrc",
-    "init_module": "/home/michael/.npm-init.js",
-    "global_prefix": "/usr/local"
+    "target": "26.2.2"
   }
 }

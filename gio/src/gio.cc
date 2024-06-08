@@ -1290,7 +1290,12 @@ namespace gio {
             g_object_unref(fileMonitor);
             return;
         }
-        g_object_unref(src);
+
+        if (src != nullptr) {
+            g_object_unref(src);
+        }
+
+
         info.GetReturnValue().SetUndefined();
 
     }

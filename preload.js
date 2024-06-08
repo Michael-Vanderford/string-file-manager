@@ -510,7 +510,7 @@ class Utilities {
         this.filter = document.querySelector('.filter');
         this.quick_search_sting = '';
 
-
+        this.initFilterListener();
         this.filter.addEventListener('keydown', (e) => {
             e.stopPropagation();
             this.filterFiles(e);
@@ -1301,7 +1301,8 @@ class Utilities {
     initFilterListener() {
         // filter / quick search
         document.addEventListener('keydown', (e) => {
-            e.stopPropagation();
+            this.filter.focus();
+            // e.stopPropagation();
             this.filterFiles(e);
         });
     }
@@ -1319,6 +1320,7 @@ class Utilities {
                     this.location.focus();
                 }
             } else {
+                let cards = active_tab_content.querySelectorAll('.card, .tr');
 
                 // check if key is a letter or number
                 // filter anything that is not a letter or number
@@ -1326,7 +1328,7 @@ class Utilities {
                 if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
                     is_quick_search = 1;
                     this.quick_search_sting += e.key;
-                    let cards = active_tab_content.querySelectorAll('.card, .tr');
+                    // let cards = active_tab_content.querySelectorAll('.card, .tr');
                     // console.log('cards', cards)
                     cards.forEach((card) => {
 
@@ -1341,8 +1343,11 @@ class Utilities {
                             }
                             ++c
 
+                            card.classList.remove('hidden');
+
                         } else {
                             card.classList.remove('highlight_select');
+                            card.classList.add('hidden');
                         }
                     })
                     // this.filter.value = this.quick_search_sting;
@@ -1356,6 +1361,9 @@ class Utilities {
 
                 if (this.quick_search_sting === '') {
                     is_quick_search = 0;
+                    cards.forEach(card => {
+                        card.classList.remove('hidden');
+                    })
                 }
 
                 if (e.key === 'Enter' || e.key === 'Escape') {
@@ -2792,6 +2800,20 @@ class ViewManager {
 
         this.files_arr = [];
 
+        // init list view settings
+        // this is currently only handling column width
+        this.list_view_settings = {
+            col_width: {
+                Location: 0,
+                Modified: 0,
+                Created: 0,
+                Accessed: 0,
+                Type: 0,
+                Size: 0,
+                Count: 0
+            }
+        }
+
         // console.log('running view manager')
         window.addEventListener('resize', this.resize);
 
@@ -3157,8 +3179,15 @@ class ViewManager {
 
     getGridView () {
 
+        console.log('running grid view')
+
         let main = document.querySelector('.main');
         let active_tab_content = document.querySelector('.active-tab-content');
+
+        let grid_view = active_tab_content.querySelector('.grid_view');
+        if (!grid_view) {
+            grid_view = add_div(['grid_view']);
+        }
 
         // get stored dirents
         let dirents = this.files_arr; //fileOperations.dirents;
@@ -3259,7 +3288,8 @@ class ViewManager {
 
         }
 
-        active_tab_content.append(folder_grid, hidden_folder_grid, file_grid, hidden_file_grid);
+        grid_view.append(folder_grid, hidden_folder_grid, file_grid, hidden_file_grid);
+        active_tab_content.append(grid_view);
 
         utilities.getFolderSizes();
         this.lazyload();
@@ -3405,10 +3435,10 @@ class ViewManager {
 
                 if (e.ctrlKey) {
                     e.dataTransfer.dropEffect = "copy";
-                    this.msg('Copy to ' + file.href);
+                    utilities.msg('Copy to ' + file.href);
                 } else {
                     e.dataTransfer.dropEffect = "move";
-                    this.msg(`Move ${count} items to ${file.href}`);
+                    // this.msg(`Move ${count} items to ${file.href}`);
                 }
 
             }
@@ -3505,7 +3535,17 @@ class ViewManager {
         document.addEventListener('mousemove', this.resizeCol);
         document.addEventListener('mouseup', this.stopColResize);
 
+        this.currentColumn.classList.add('resizing');
         this.isResizing = true;
+
+        this.list_view_settings.col_width[this.currentColumn.classList[0]] = this.startWidth;
+
+        console.log('resizing',
+                    this.currentColumn,
+                    this.currentColumn.style.width,
+                    this.startX,
+                    this.startWidth,
+                    this.dragHandle.offsetWidth)
 
     }
 
@@ -3522,18 +3562,19 @@ class ViewManager {
                 this.dragHandle.parentElement.style.width = `${newWidth}px`;
 
                 this.isResizing = true;
-                console.log('resizing', this.isResizing, newWidth)
+
+                console.log('resizing',
+                            this.currentColumn.style.width,
+                            this.startX,
+                            this.startWidth,
+                            newWidth)
 
                 this.currentColumn.style.cursor = 'col-resize';
+                this.list_view_settings.col_width[this.currentColumn.classList[0]] = newWidth;
 
             });
 
         }
-
-        // if (newWidth > 50 && (!this.nextColumn || nextNewWidth > 50)) {
-        //     this.currentColumn.style.width = `${newWidth}px`;
-        //     if (this.nextColumn) this.nextColumn.style.width = `${nextNewWidth}px`;
-        // }
 
     }
 
@@ -3547,14 +3588,20 @@ class ViewManager {
             this.currentColumn.style.cursor = 'default';
             this.isResizing = false;
 
-            // if (this.isResizing) {
-            //     this.isResizing = false;
-            //     console.log('resizing stopped', this.isResizing)
-            //     e.stopImmediatePropagation();
-            // }
-
             document.removeEventListener('mousemove', this.resizeCol);
             document.removeEventListener('mouseup', this.stopColResize);
+
+            this.currentColumn.classList.remove('resizing');
+
+            // update width of all columns
+            let ths = document.querySelectorAll('th');
+            ths.forEach(th => {
+                if (th.classList[0] !== 'Count') {
+                    this.list_view_settings.col_width[th.classList[0]] = th.offsetWidth;
+                }
+                // this.list_view_settings.col_width[th.classList[0]] = th.offsetWidth;
+            })
+            ipcRenderer.send('update_list_view_settings', this.list_view_settings);
 
         }
 
@@ -3580,12 +3627,12 @@ class ViewManager {
             //     utilities.removeEmptyFolderMsg();
             // }
 
-            // // column headers array
-            // const columnHeaders = Object.keys(settings.Captions).filter(
-            //     (caption) => settings.Captions[caption] === true
-            // );
+            // column headers array
+            const columnHeaders = Object.keys(settings.Captions).filter(
+                (caption) => settings.Captions[caption] === true
+            );
 
-            const columnHeaders = Object.keys(settings.Captions)
+            // const columnHeaders = Object.keys(settings.Captions)
 
             let list_view_table = document.querySelector('.list_view_table');
             if (list_view_table) {
@@ -3621,20 +3668,25 @@ class ViewManager {
                 columnHeaders.forEach((header) => {
 
                     // // check if header is enabled
-                    if (settings['Captions'][header] === true) {
-
-
+                    // if (settings['Captions'][header] === true) {
 
                     const th = document.createElement("th");
                     th.textContent = header;
-                    th.classList.add(header.toLocaleLowerCase());
+                    th.classList.add(header);
 
                     // drag / resize columns
                     const drag_handle = add_div(['th_drag_handle']);
 
                     th.prepend(drag_handle);
                     headerRow.appendChild(th);
-                    th.style.width = `${settings['Captions Size'][header]}px`;
+
+                    ipcRenderer.invoke('get_list_view_settings').then(settings => {
+                        console.log('settings', settings)
+                        if (settings['col_width'][header] !== undefined && settings['col_width'][header] !== 0) {
+                            console.log('setting width', settings['col_width'][header])
+                            th.style.width = `${settings['col_width'][header]}px`;
+                        }
+                    })
 
                     drag_handle.addEventListener('mousedown', this.initColResize)
 
@@ -3669,9 +3721,9 @@ class ViewManager {
                         ipcRenderer.send('columns_menu', header);
                     })
 
-                    } else {
+                    // } else {
 
-                    }
+                    // }
 
                 });
 
@@ -3696,7 +3748,7 @@ class ViewManager {
             if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
                 dirents = dirents.filter((dirent) => !dirent.is_hidden);
             }
-            
+
 
             dirents.sort((a, b) => {
                 if (a.is_dir && !b.is_dir) {
@@ -3736,6 +3788,7 @@ class ViewManager {
             //     }
             // });
 
+
             let icon_size = iconManager.getIconSize();
             iconManager.resizeIcons(icon_size);
 
@@ -3757,7 +3810,8 @@ class ViewManager {
      * Grid View
      */
     gridView() {
-        console.log('running grid view')
+
+        // console.log('running grid view')
         let tabs_content = document.querySelectorAll('.tab-content');
         tabs_content.forEach((tab_content, idx) => {
 

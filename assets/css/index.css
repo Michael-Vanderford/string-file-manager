@@ -1,3 +1,7 @@
+* {
+    /* box-sizing: border-box; */
+}
+
 html,
 body {
     overflow: hidden;
@@ -40,9 +44,10 @@ body {
 .main {
     /* position: relative; */
     /* background: linear-gradient(to right, var(--main), var(--menu)); */
+    box-sizing: border-box;
     flex-grow: 1;
     background: var(--main);
-    border: 1px solid var(--border);
+    /* border: 1px solid red; */
     border-radius: 5px;
     width: 100%;
     height: 100vh;
@@ -148,9 +153,13 @@ body {
     line-height: 18px;
 }
 
+.grid_view {
+    padding: 10px;
+}
 
 .list_view {
     user-select: none;
+    width: 100%;
 }
 
 .list_view_table.pre {
@@ -165,7 +174,8 @@ body {
 
 .list_view_table {
     position: relative;
-    table-layout: fixed;
+    table-layout:fixed;
+    /* border-collapse: collapse; */
     width: 100%;
     border-spacing: 0 8px;
     margin-top: -15px;
@@ -179,9 +189,12 @@ body {
     padding-left: 5px;
     background: var(--main);
     border-bottom: 1px solid var(--border);
-    z-index: 1;
+    z-index: 3;
     cursor: pointer;
     user-select: none;
+    width: auto;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .list_view .th_drag_handle {
@@ -189,10 +202,16 @@ body {
     right: 0;
     top: 0;
     height: 100%;
-    width: 2px;
+    width: 4px;
     border-right: 1px solid var(--border);
     /* background-color: red; */
     cursor: col-resize;
+}
+
+.list_view th.resizing {
+    opacity: 0.5;
+    /* Prevent the column from moving right */
+    /* position: relative; */
 }
 
 .list_view .th_drag_handle:hover {
@@ -210,6 +229,10 @@ body {
 .list_view .tbody_new {
     /* opacity: 0; */
     /* transition: opacity 1.5s ease-in-out; */
+}
+
+.list_view th.name {
+    width: 350px;
 }
 
 .list_view th.location {

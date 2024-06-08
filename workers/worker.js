@@ -992,6 +992,7 @@ parentPort.on('message', data => {
                 let msg = {
                     cmd: 'msg',
                     msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" /> Getting files for copy operation...`,
+                    has_timeout: 0
                 }
                 parentPort.postMessage(msg);
 
