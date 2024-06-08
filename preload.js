@@ -1370,6 +1370,7 @@ class Utilities {
                     is_quick_search = 0;
                     this.quick_search_sting = '';
                     this.filter.value = '';
+                    active_tab_content.focus();
                 }
 
             }
@@ -2843,6 +2844,7 @@ class ViewManager {
 
         this.isResizing = false;
 
+        this.sortColumn = this.sortColumn.bind(this);
         this.initColResize = this.initColResize.bind(this);
         this.resizeCol = this.resizeCol.bind(this);
         this.stopColResize = this.stopColResize.bind(this);
@@ -3522,6 +3524,28 @@ class ViewManager {
 
     }
 
+    sortColumn (e) {
+
+        if (this.isResizing) {
+            return;
+        }
+
+        let column = e.target.classList[0];
+
+        // sort by column
+        let sort_order = "desc";
+        if (settings.Sort) {
+            sort_order = settings.Sort.order;
+        }
+        sort_order = sort_order === 'asc' ? 'desc' : 'asc';
+
+        settings.Sort.by = column.toLocaleLowerCase();
+        settings.Sort.order = sort_order;
+        ipcRenderer.send('save_settings', settings);
+        this.getListView();
+
+    }
+
     initColResize(e) {
 
         e.stopPropagation();
@@ -3546,6 +3570,8 @@ class ViewManager {
                     this.startX,
                     this.startWidth,
                     this.dragHandle.offsetWidth)
+
+        this.currentColumn.removeEventListener('click', this.sortColumn);
 
     }
 
@@ -3580,8 +3606,9 @@ class ViewManager {
 
     stopColResize(e) {
 
-        // e.stopPropagation();
-        // e.preventDefault();
+        e.stopPropagation();
+        e.preventDefault();
+        e.stopImmediatePropagation();
 
         if (this.isResizing) {
 
@@ -3602,6 +3629,10 @@ class ViewManager {
                 // this.list_view_settings.col_width[th.classList[0]] = th.offsetWidth;
             })
             ipcRenderer.send('update_list_view_settings', this.list_view_settings);
+
+            setTimeout(() => {
+                this.currentColumn.addEventListener('click', this.sortColumn);
+            }, 100);
 
         }
 
@@ -3691,28 +3722,21 @@ class ViewManager {
                     drag_handle.addEventListener('mousedown', this.initColResize)
 
                     // sort by header
-
-                    th.addEventListener('click', (e) => {
-
-                        if (this.isResizing) {
-
-                            console.log('sorting by column', header, this.isResizing)
-
-                            e.preventDefault();
-                            e.stopImmediatePropagation();
-                            e.stopPropagation();
-
-                            // sort by column
-                            sort_order = sort_order === 'asc' ? 'desc' : 'asc';
-
-                            settings.Sort.by = header.toLocaleLowerCase();
-                            settings.Sort.order = sort_order;
-                            ipcRenderer.send('save_settings', settings);
-                            this.getListView();
-
-                        }
-
-                    });
+                    th.addEventListener('click', this.sortColumn);
+                    // th.addEventListener('click', (e) => {
+                    //     if (!this.isResizing) {
+                    //         console.log('sorting by column', header, this.isResizing)
+                    //         e.preventDefault();
+                    //         e.stopImmediatePropagation();
+                    //         e.stopPropagation();
+                    //         // sort by column
+                    //         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
+                    //         settings.Sort.by = header.toLocaleLowerCase();
+                    //         settings.Sort.order = sort_order;
+                    //         ipcRenderer.send('save_settings', settings);
+                    //         this.getListView();
+                    //     }
+                    // });
 
 
                     th.addEventListener('contextmenu', (e) => {
