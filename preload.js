@@ -503,6 +503,7 @@ class Utilities {
 
     constructor() {
 
+        this.active_tab_content = document.querySelector('.active-tab-content');
         this.location = document.querySelector('.location');
         this.timeout_id = 0;
         this.msg_timeout_id = 0;
@@ -897,13 +898,13 @@ class Utilities {
         let endPosX = 0;
         let endPosY = 0;
 
-        const active_tab_content = document.querySelector('.active-tab-content');
-        const cards = active_tab_content.querySelectorAll('.card, .tr');
+        this.active_tab_content = document.querySelector('.active-tab-content');
+        const cards = this.active_tab_content.querySelectorAll('.card, .tr');
 
         // console.log('cards', cards)
         // const tab_content = document.querySelector('.tab-content');
 
-        active_tab_content.addEventListener('mousedown', (e) => {
+        this.active_tab_content.addEventListener('mousedown', (e) => {
 
             if (e.button === 2 || is_dragging_tab) {
                 is_dragging_tab = false;
@@ -925,7 +926,7 @@ class Utilities {
         });
 
         let allowClick = 1;
-        active_tab_content.addEventListener('mousemove', (e) => {
+        this.active_tab_content.addEventListener('mousemove', (e) => {
 
             // e.preventDefault();
             // e.stopPropagation();
@@ -1006,13 +1007,13 @@ class Utilities {
 
         })
 
-        active_tab_content.addEventListener('mouseup', (e) => {
+        this.active_tab_content.addEventListener('mouseup', (e) => {
             isSelecting = false;
             selectionRectangle.style.display = 'none';
             // utilities.msg(`${viewManager.getFolderCount()} Folders / ${viewManager.getFileCount()} Files Selected (${getFileSize(viewManager.getTotalSize())})`);
         });
 
-        active_tab_content.addEventListener('click', (e) => {
+        this.active_tab_content.addEventListener('click', (e) => {
             if (allowClick) {
                 clearHighlight()
             } else {
@@ -1307,19 +1308,42 @@ class Utilities {
 
     filterFiles (e) {
 
-        let active_tab_content = document.querySelector('.active-tab-content');
-
-        console.log(document.activeElement)
+        this.active_tab_content = document.querySelector('.active-tab-content');
+        let cards = this.active_tab_content.querySelectorAll('.card, .tr');
+        // console.log(document.activeElement)
 
         // if (document.activeElement.tagName.toLowerCase() !== 'input') {
 
-            if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.key === 'Tab') {
+            if (e.ctrlKey || e.key === 'Tab') {
                 if (e.ctrlKey && e.key.toLocaleLowerCase() === 'l') {
                     this.location.focus();
                 }
-            } else {
-                let cards = active_tab_content.querySelectorAll('.card, .tr');
+            } else if (e.key === 'Backspace') {
+                this.quick_search_sting = this.filter.value.slice(0, -1);
 
+                console.log('quick search sting', this.quick_search_sting);
+
+                cards.forEach((card) => {
+                    if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
+                        card.classList.remove('hidden');
+                    } else {
+                        // card.classList.remove('highlight_select');
+                        card.classList.add('hidden');
+                    }
+                })
+
+                if (this.quick_search_sting === '') {
+                    console.log('quick search sting is empty')
+                    // is_quick_search = 0;
+                    cards.forEach(card => {
+                        card.classList.remove('hidden');
+                    })
+                    // cards[0].querySelector('a').focus();
+                }
+
+            } else {
+
+                // let cards = this.active_tab_content.querySelectorAll('.card, .tr');
                 // check if key is a letter or number
                 // filter anything that is not a letter or number
                 let c = 0;
@@ -1327,23 +1351,9 @@ class Utilities {
                     this.filter.focus();
                     is_quick_search = 1;
                     this.quick_search_sting += e.key;
-                    // let cards = active_tab_content.querySelectorAll('.card, .tr');
-                    // console.log('cards', cards)
                     cards.forEach((card) => {
-
-                        // if (card.dataset.href.toLocaleLowerCase().indexOf(this.quick_search_sting) > -1) {
-                        if (card.dataset.name.toLocaleLowerCase().startsWith(this.quick_search_sting)) {
-
-                            card.classList.add('highlight_select');
-
-                            if (c === 0) {
-                                let active_href = card.querySelector('.header a, .display_name a');
-                                // active_href.focus();
-                            }
-                            ++c
-
-                            card.classList.remove('hidden');
-
+                        if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
+                            // card.classList.remove('hidden');
                         } else {
                             card.classList.remove('highlight_select');
                             card.classList.add('hidden');
@@ -1352,25 +1362,44 @@ class Utilities {
                     // this.filter.value = this.quick_search_sting;
                 }
 
-                if (this.quick_search_sting !== '' && e.key === 'Backspace') {
-                    this.quick_search_sting = this.quick_search_sting.slice(0, -1);
-                    this.filter.value = this.quick_search_sting;
-                    // utilities.msg(this.quick_search_sting)
-                }
+                // if (e.key === 'Backspace') {
 
-                if (this.quick_search_sting === '') {
-                    is_quick_search = 0;
-                    cards.forEach(card => {
-                        card.classList.remove('hidden');
-                    })
-                }
+                //     // this.quick_search_sting = this.quick_search_sting.slice(0, -1);
+                //     // this.filter.value = this.quick_search_sting;
 
-                if (e.key === 'Enter' || e.key === 'Escape') {
-                    is_quick_search = 0;
-                    this.quick_search_sting = '';
-                    this.filter.value = '';
-                    active_tab_content.focus();
-                }
+                //     this.quick_search_sting = this.filter.value;
+                //     cards.forEach((card) => {
+                //         if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
+                //             // card.classList.remove('hidden');
+                //         } else {
+                //             card.classList.remove('highlight_select');
+                //             card.classList.add('hidden');
+                //         }
+                //     })
+                //     console.log('quick search sting', this.quick_search_sting);
+
+                // }
+
+                // if (this.quick_search_sting === '') {
+                //     console.log('quick search sting is empty')
+                //     // is_quick_search = 0;
+                //     cards.forEach(card => {
+                //         card.classList.remove('hidden');
+                //     })
+                //     // cards[0].querySelector('a').focus();
+                // }
+
+                // if (e.key === 'Enter' || e.key === 'Escape') {
+                //     is_quick_search = 0;
+                //     this.quick_search_sting = '';
+                //     this.filter.value = '';
+                //     let active_href = active_tab_content.querySelector('a');
+                //     if (active_href) {
+                //         active_href.focus();
+                //     } else {
+                //         utilities.msg('Error: No items found');
+                //     }
+                // }
 
             }
 
@@ -2285,7 +2314,7 @@ class Navigation {
         // let active_tab_content = document.querySelector('.active-tab-content');
         // if (view === 'grid') {
 
-            console.log('cardGroups', this.cardGroups)
+            // console.log('cardGroups', this.cardGroups)
 
             let card = this.cardGroups[this.nav_group][this.nav_idx];
             card.classList.add('highlight_select');
@@ -2303,53 +2332,53 @@ class Navigation {
         card.classList.remove('highlight_select');
     }
 
-    quickSearch(e) {
+    // quickSearch(e) {
 
-        let main = document.querySelector('.main');
-        let filter = document.querySelector('.filter');
-        let quicksearch = add_div(['quicksearch', 'bottom', 'right']); //document.querySelector('.quicksearch');
-        let txt_quicksearch = document.createElement('input'); //document.getElementById('txt_quicksearch');
+    //     let main = document.querySelector('.main');
+    //     let filter = document.querySelector('.filter');
+    //     let quicksearch = add_div(['quicksearch', 'bottom', 'right']); //document.querySelector('.quicksearch');
+    //     let txt_quicksearch = document.createElement('input'); //document.getElementById('txt_quicksearch');
 
-        txt_quicksearch.id = 'txt_quicksearch';
-        txt_quicksearch.classList.add('input');
-        txt_quicksearch.type = 'text';
+    //     txt_quicksearch.id = 'txt_quicksearch';
+    //     txt_quicksearch.classList.add('input');
+    //     txt_quicksearch.type = 'text';
 
-        quicksearch.append(txt_quicksearch);
-        quicksearch.classList.remove('hidden');
-        main.append(quicksearch);
+    //     quicksearch.append(txt_quicksearch);
+    //     quicksearch.classList.remove('hidden');
+    //     main.append(quicksearch);
 
-        txt_quicksearch.focus();
+    //     txt_quicksearch.focus();
 
-        txt_quicksearch.addEventListener('keydown', (e) => {
-            if (/^[A-Za-z]$/.test(e.key)) {
-                // txt_quicksearch.value = e.key
-            }
+    //     txt_quicksearch.addEventListener('keydown', (e) => {
+    //         if (/^[A-Za-z]$/.test(e.key)) {
+    //             // txt_quicksearch.value = e.key
+    //         }
 
-            if (e.key === 'Enter') {
+    //         if (e.key === 'Enter') {
 
-                let c = 0;
-                let cards = document.querySelectorAll('.card')
-                cards.forEach(card => {
-                    if (card.dataset.href.toLocaleLowerCase().indexOf(txt_quicksearch.value) > -1) {
-                        card.classList.add('highlight');
-                        if (c === 0) {
-                            let href = card.querySelector('.header a');
-                            href.focus();
-                        }
-                        ++c;
-                    }
-                })
-                quicksearch.classList.add('hidden');
-                txt_quicksearch.value = '';
-            }
+    //             let c = 0;
+    //             let cards = document.querySelectorAll('.card')
+    //             cards.forEach(card => {
+    //                 if (card.dataset.href.toLocaleLowerCase().indexOf(txt_quicksearch.value) > -1) {
+    //                     card.classList.add('highlight');
+    //                     if (c === 0) {
+    //                         let href = card.querySelector('.header a');
+    //                         href.focus();
+    //                     }
+    //                     ++c;
+    //                 }
+    //             })
+    //             quicksearch.classList.add('hidden');
+    //             txt_quicksearch.value = '';
+    //         }
 
-            if (e.key === 'Escape') {
-                quicksearch.classList.add('hidden')
-            }
+    //         if (e.key === 'Escape') {
+    //             quicksearch.classList.add('hidden')
+    //         }
 
-        })
+    //     })
 
-    }
+    // }
 
 }
 
@@ -3684,7 +3713,7 @@ class ViewManager {
                     list_view_table.classList.add('pre');
                 }
 
-                console.log('list_view_table', list_view_table)
+                // console.log('list_view_table', list_view_table)
 
                 // load table
                 active_tab_content.append(list_container);
@@ -3711,9 +3740,9 @@ class ViewManager {
                     headerRow.appendChild(th);
 
                     ipcRenderer.invoke('get_list_view_settings').then(settings => {
-                        console.log('settings', settings)
+                        // console.log('settings', settings)
                         if (settings['col_width'][header] !== undefined && settings['col_width'][header] !== 0) {
-                            console.log('setting width', settings['col_width'][header])
+                            // console.log('setting width', settings['col_width'][header])
                             th.style.width = `${settings['col_width'][header]}px`;
                         }
                     })
@@ -6612,6 +6641,11 @@ function clear() {
     copy_arr = [];
     selected_files_arr = [];
     selected_files_delete_arr = [];
+
+    let filter = document.querySelector('.filter');
+    if (filter) {
+        filter.value = '';
+    }
 
     // global.gc()
 
