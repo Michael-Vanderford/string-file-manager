@@ -1301,6 +1301,7 @@ class Utilities {
     // todo implement this
     initFilterListener() {
         // filter / quick search
+        this.filter.classList.add('empty');
         document.addEventListener('keydown', (e) => {
             this.filterFiles(e);
         });
@@ -1310,35 +1311,36 @@ class Utilities {
 
         this.active_tab_content = document.querySelector('.active-tab-content');
         let cards = this.active_tab_content.querySelectorAll('.card, .tr');
-        // console.log(document.activeElement)
 
-        // if (document.activeElement.tagName.toLowerCase() !== 'input') {
+        // converted quick to a editable div so this line works properly
+        // bypass firing on input elements
+        if (document.activeElement.tagName.toLowerCase() !== 'input') {
 
             if (e.ctrlKey || e.key === 'Tab') {
                 if (e.ctrlKey && e.key.toLocaleLowerCase() === 'l') {
                     this.location.focus();
                 }
-            } else if (e.key === 'Backspace') {
-                this.quick_search_sting = this.filter.value.slice(0, -1);
+            } else if (e.key === 'Backspace' && document.activeElement === this.filter) {
 
-                console.log('quick search sting', this.quick_search_sting);
+                console.log('backspace', document.activeElement)
+
+                this.quick_search_sting = this.filter.innerText.slice(0, -1);
+                console.log('backspace', this.quick_search_sting)
 
                 cards.forEach((card) => {
                     if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
                         card.classList.remove('hidden');
                     } else {
-                        // card.classList.remove('highlight_select');
                         card.classList.add('hidden');
                     }
                 })
 
                 if (this.quick_search_sting === '') {
-                    console.log('quick search sting is empty')
                     // is_quick_search = 0;
+                    this.filter.classList.add('empty');
                     cards.forEach(card => {
                         card.classList.remove('hidden');
                     })
-                    // cards[0].querySelector('a').focus();
                 }
 
             } else {
@@ -1346,9 +1348,9 @@ class Utilities {
                 // let cards = this.active_tab_content.querySelectorAll('.card, .tr');
                 // check if key is a letter or number
                 // filter anything that is not a letter or number
-                let c = 0;
                 if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
                     this.filter.focus();
+                    this.filter.classList.remove('empty');
                     is_quick_search = 1;
                     this.quick_search_sting += e.key;
                     cards.forEach((card) => {
@@ -1362,48 +1364,23 @@ class Utilities {
                     // this.filter.value = this.quick_search_sting;
                 }
 
-                // if (e.key === 'Backspace') {
-
-                //     // this.quick_search_sting = this.quick_search_sting.slice(0, -1);
-                //     // this.filter.value = this.quick_search_sting;
-
-                //     this.quick_search_sting = this.filter.value;
-                //     cards.forEach((card) => {
-                //         if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
-                //             // card.classList.remove('hidden');
-                //         } else {
-                //             card.classList.remove('highlight_select');
-                //             card.classList.add('hidden');
-                //         }
-                //     })
-                //     console.log('quick search sting', this.quick_search_sting);
-
-                // }
-
-                // if (this.quick_search_sting === '') {
-                //     console.log('quick search sting is empty')
-                //     // is_quick_search = 0;
-                //     cards.forEach(card => {
-                //         card.classList.remove('hidden');
-                //     })
-                //     // cards[0].querySelector('a').focus();
-                // }
-
-                // if (e.key === 'Enter' || e.key === 'Escape') {
-                //     is_quick_search = 0;
-                //     this.quick_search_sting = '';
-                //     this.filter.value = '';
-                //     let active_href = active_tab_content.querySelector('a');
-                //     if (active_href) {
-                //         active_href.focus();
-                //     } else {
-                //         utilities.msg('Error: No items found');
-                //     }
-                // }
+                if ((e.key === 'Enter' || e.key === 'Escape' || e.key === 'ArrowDown') && document.activeElement === this.filter) {
+                    is_quick_search = 0;
+                    this.quick_search_sting = '';
+                    this.filter.innerText = '';
+                    let active_href = this.active_tab_content.querySelector('.header a, .display_name a');
+                    if (active_href) {
+                        let card = active_href.closest('.card, .tr');
+                        card.classList.add('highlight_select');
+                        active_href.focus();
+                    } else {
+                        utilities.msg('Error: No items found');
+                    }
+                }
 
             }
 
-        // }
+        }
 
     };
 
@@ -1976,7 +1953,7 @@ class Navigation {
         this.location.addEventListener('keydown', (e) => {
 
             this.suggestions = popup.querySelectorAll('.item');
-            console.log('suggestions', this.suggestions)
+            console.log('suggestions', this.suggestions);
 
             switch (e.key) {
                 case 'ArrowDown': {
@@ -2751,9 +2728,9 @@ class TabManager {
 
         console.log('tab history back', this.tab_id);
 
-        if (is_quick_search === 1) {
-            return;
-        }
+        // if (is_quick_search === 1) {
+        //     return;
+        // }
 
         // get tab history idx from array
         this.tab_history_idx = this.getTabHistoryIdx(this.tab_id);
@@ -3698,7 +3675,7 @@ class ViewManager {
                 list_view_table.classList.add('pre');
             }
 
-            console.log('list_view_table', list_view_table)
+            // console.log('list_view_table', list_view_table)
 
             // check if th exists
             let th = active_tab_content.querySelector("thead");
@@ -4227,19 +4204,18 @@ class FileOperations {
 
             let st = new Date().getTime();
 
+            clearHighlight();
+
             // set dirents for views
             this.dirents = data.dirents;
             viewManager.files_arr = data.dirents;
 
-            let dirents = data.dirents;
+            // let dirents = data.dirents;
             let source = data.source;
             let tab = data.tab;
             let display_name = data.display_name;
 
-            // if (source !== 'Recent') {
-                localStorage.setItem('location', source);
-            // }
-            // navigation.addHistory(source);
+            localStorage.setItem('location', source);
             auto_complete_arr = [];
 
             let main = document.querySelector('.main');
@@ -6642,10 +6618,10 @@ function clear() {
     selected_files_arr = [];
     selected_files_delete_arr = [];
 
-    let filter = document.querySelector('.filter');
-    if (filter) {
-        filter.value = '';
-    }
+    // let filter = document.querySelector('.filter');
+    // if (filter) {
+    //     filter.value = '';
+    // }
 
     // global.gc()
 
@@ -6677,6 +6653,12 @@ function clearHighlight() {
         }
 
     })
+
+    let filter = document.querySelector('.filter');
+    if (filter) {
+        filter.innerText = '';
+        filter.classList.add('empty');
+    }
     // utilities.msg('');
 }
 

@@ -12,6 +12,7 @@ body {
     height: 100%;
     background: var(--main);
     color: var(--text);
+    min-width: 1024px;
 }
 
 .container {
@@ -45,7 +46,7 @@ body {
     /* position: relative; */
     /* background: linear-gradient(to right, var(--main), var(--menu)); */
     box-sizing: border-box;
-    flex-grow: 1;
+    /* flex-grow: 1; */
     background: var(--main);
     /* border: 1px solid red; */
     border-radius: 5px;
@@ -419,7 +420,6 @@ th {
     margin-right: 15px;
     background: var(--location);
     border: 1px solid var(--location-border);
-    /* border: inset; */
     font-size: 1em;
     height: 23px;
     width: 96%;
@@ -427,7 +427,8 @@ th {
     font-weight: bold;
 }
 
-.nav_menu input[type=text].filter {
+.nav_menu .filter {
+    outline: none;
     border-radius: 5px;
     color: var(--text);
     padding-left: 10px;
@@ -435,9 +436,19 @@ th {
     background: var(--location);
     border: 1px solid var(--location-border);
     font-size: 1em;
-    height: 23px;
+    height: 27px;
     width: 200px;
     font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 26px;
+}
+
+.nav_menu .filter.empty::before {
+    content: attr(data-placeholder);
+    color: gray;
+    pointer-events: none;
 }
 
 .nav_menu .back:hover {
