@@ -1348,6 +1348,7 @@ class Utilities {
                 // let cards = this.active_tab_content.querySelectorAll('.card, .tr');
                 // check if key is a letter or number
                 // filter anything that is not a letter or number
+
                 if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
                     this.filter.focus();
                     this.filter.classList.remove('empty');
@@ -1362,12 +1363,16 @@ class Utilities {
                         }
                     })
                     // this.filter.value = this.quick_search_sting;
+
                 }
 
                 if ((e.key === 'Enter' || e.key === 'Escape' || e.key === 'ArrowDown') && document.activeElement === this.filter) {
+
                     is_quick_search = 0;
-                    this.quick_search_sting = '';
-                    this.filter.innerText = '';
+
+                    // this.quick_search_sting = '';
+                    // this.filter.innerText = '';
+
                     let active_href = this.active_tab_content.querySelector('.header a, .display_name a');
                     if (active_href) {
                         let card = active_href.closest('.card, .tr');
@@ -1376,13 +1381,24 @@ class Utilities {
                     } else {
                         utilities.msg('Error: No items found');
                     }
+
                 }
 
             }
 
+            navigation.getCardGroups();
+
         }
 
     };
+
+    clearFilter() {
+        let filter = document.querySelector('.filter');
+        if (filter) {
+            filter.innerText = '';
+            filter.classList.add('empty');
+        }
+    }
 
 
 }
@@ -2094,8 +2110,12 @@ class Navigation {
             // console.log('grid item', grid_item)
             if (grid_item && !grid_item.classList.contains('hidden')) {
                 let cards = grid_item.querySelectorAll('.card, .tr');
-                if (cards.length > 0) {
-                    this.cardGroups.push(cards);
+
+                let filtered_cards = Array.from(cards).filter(card => !card.classList.contains('hidden'));
+                console.log('filtered cards', filtered_cards.length )
+
+                if (filtered_cards.length > 0) {
+                    this.cardGroups.push(filtered_cards);
                 }
             }
         })
@@ -4204,7 +4224,7 @@ class FileOperations {
 
             let st = new Date().getTime();
 
-            clearHighlight();
+            utilities.clearFilter();
 
             // set dirents for views
             this.dirents = data.dirents;
@@ -6653,12 +6673,6 @@ function clearHighlight() {
         }
 
     })
-
-    let filter = document.querySelector('.filter');
-    if (filter) {
-        filter.innerText = '';
-        filter.classList.add('empty');
-    }
     // utilities.msg('');
 }
 

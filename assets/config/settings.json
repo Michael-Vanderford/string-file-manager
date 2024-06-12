@@ -12,15 +12,6 @@
         "Size": true,
         "Count": true
     },
-    "Captions Size": {
-        "Location": 150,
-        "Modified": 150,
-        "Created": 150,
-        "Accessed": 150,
-        "Type": 50,
-        "Size": 60,
-        "Count": 60
-    },
     "Hidden Files": {
         "show": false
     },
