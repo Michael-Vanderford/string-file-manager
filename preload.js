@@ -2837,6 +2837,10 @@ class ViewManager {
                 Type: 0,
                 Size: 0,
                 Count: 0
+            },
+            Sort: {
+                by: 'Name',
+                order: 'asc'
             }
         }
 
