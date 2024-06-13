@@ -1282,13 +1282,14 @@ input[type=text]:focus {
 .highlight {
     /* box-sizing: border-box; */
     background: linear-gradient(to right, var(--highlight), var(--main));
+
     /* border: 1px solid var(--green) */
 }
 
 .highlight_select {
     border-radius: 5px;
     background: var(--highlight-select);
-    /* box-shadow: 0 0 3px var(--orange); */
+    box-shadow: 0 0 3px var(--highlight-active);
     user-select: none;
 }
 
@@ -1594,6 +1595,7 @@ input[type=text]:focus {
         --link: #4183c4;
         --highlight: #233246;
         --highlight-select: #233246;
+        --highlight-active: #C5B359;
 
         --not-writable: #cfcfcf;
 
