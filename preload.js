@@ -2874,6 +2874,9 @@ class ViewManager {
         this.resizeCol = this.resizeCol.bind(this);
         this.stopColResize = this.stopColResize.bind(this);
 
+        this.sort_asc_icon = add_icon('bi-caret-up-fill');
+        this.sort_desc_icon = add_icon('bi-caret-down-fill');
+
         // Update list view on column change
         ipcRenderer.on('get_list_view', (e) => {
             let active_tab_content = document.querySelector('.active-tab-content');
@@ -3555,7 +3558,9 @@ class ViewManager {
             return;
         }
 
-        let column = e.target.classList[0];
+        let th = e.target;
+        let sort_div = th.querySelector('.sort_div');
+        let column = th.classList[0];
 
         // sort by column
         let sort_by = 'name';
@@ -3575,11 +3580,19 @@ class ViewManager {
 
         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
 
+        sort_div.innerHTML = '';
+        if (sort_order === 'asc') {
+            sort_div.append(this.sort_asc_icon);
+        } else {
+            sort_div.append(this.sort_desc_icon);
+        }
 
         settings.Sort.by = sort_by; //column.toLocaleLowerCase();
         settings.Sort.order = sort_order;
         ipcRenderer.send('save_settings', settings);
         this.getListView();
+
+        // let th = document.querySelector(`[data-sort_by="${sort_by}"]`);
 
     }
 
@@ -3740,11 +3753,14 @@ class ViewManager {
                     const th = document.createElement("th");
                     th.textContent = header;
                     th.classList.add(header);
+                    th.dataset.sort_by = header.toLowerCase();
 
                     // drag / resize columns
+                    const sort_div = add_div(['sort_div']);
                     const drag_handle = add_div(['th_drag_handle']);
 
-                    th.prepend(drag_handle);
+                    th.appendChild(sort_div);
+                    th.appendChild(drag_handle);
                     headerRow.appendChild(th);
 
                     ipcRenderer.invoke('get_list_view_settings').then(settings => {
@@ -3957,7 +3973,6 @@ class ViewManager {
             // console.log(settings)
             const { Sort: { by, order } } = settings;
             const sort = `${by}_${order}`;
-            // let sort = `${settings.Sort["by"]}_${settings.Sort["order"]}`;
 
             switch (sort) {
                 case 'name_asc': {

@@ -321,6 +321,14 @@ body {
     width: 100%;
 }
 
+.list_view .sor_div {
+    border: 1px solid var(--border);
+    position: relative;
+    float: right;
+    width: 16px;
+    height: 16px;
+}
+
 /* Progress input */
 progress {
     height: 15px;
