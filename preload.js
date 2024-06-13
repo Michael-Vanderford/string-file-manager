@@ -3580,6 +3580,11 @@ class ViewManager {
 
         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
 
+        // handle sort direction icons
+        let sort_divs = document.querySelectorAll('.sort_div');
+        sort_divs.forEach(div => {
+            div.innerHTML = '';
+        })
         sort_div.innerHTML = '';
         if (sort_order === 'asc') {
             sort_div.append(this.sort_asc_icon);
@@ -3699,27 +3704,15 @@ class ViewManager {
             let dirents = this.files_arr;
             let active_tab_content = document.querySelector('.active-tab-content');
 
-            // console.log('running get list view', dirents)
-            // if (dirents.length === 0) {
-            //     utilities.showEmptyFolderMsg();
-            //     return;
-            // } else {
-            //     utilities.removeEmptyFolderMsg();
-            // }
-
             // column headers array
             const columnHeaders = Object.keys(settings.Captions).filter(
                 (caption) => settings.Captions[caption] === true
             );
 
-            // const columnHeaders = Object.keys(settings.Captions)
-
             let list_view_table = document.querySelector('.list_view_table');
             if (list_view_table) {
                 list_view_table.classList.add('pre');
             }
-
-            // console.log('list_view_table', list_view_table)
 
             // check if th exists
             let th = active_tab_content.querySelector("thead");
@@ -3733,8 +3726,6 @@ class ViewManager {
                 if (list_view_table) {
                     list_view_table.classList.add('pre');
                 }
-
-                // console.log('list_view_table', list_view_table)
 
                 // load table
                 active_tab_content.append(list_container);
@@ -3762,6 +3753,15 @@ class ViewManager {
                     th.appendChild(sort_div);
                     th.appendChild(drag_handle);
                     headerRow.appendChild(th);
+
+                    // handle sort direction icon
+                    if (settings.Sort && settings.Sort.by === header.toLowerCase()) {
+                        if (sort_order === 'asc') {
+                            sort_div.append(this.sort_asc_icon);
+                        } else {
+                            sort_div.append(this.sort_desc_icon);
+                        }
+                    }
 
                     ipcRenderer.invoke('get_list_view_settings').then(settings => {
                         if (settings['col_width'][header] !== undefined && settings['col_width'][header] !== 0) {

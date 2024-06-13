@@ -186,6 +186,7 @@ body {
     height: 23px;
     position: sticky;
     top: 0;
+    padding-top: 5px;
     padding-bottom: 4px;
     padding-left: 5px;
     background: var(--main);
@@ -196,6 +197,9 @@ body {
     width: auto;
     overflow: hidden;
     white-space: nowrap;
+    vertical-align: center;
+    line-height: 100%;
+
 }
 
 .list_view .th_drag_handle {
@@ -219,9 +223,22 @@ body {
     background-color: #3794ff !important;
 }
 
-.list_view th:last-child .th_drag_handle {
-    display: none;
+.list_view .sort_div {
+    /* border: 1px solid var(--border); */
+    position: absolute;
+    text-align: center;
+    vertical-align: middle;
+    padding-top: 5px;
+    top: 0;
+    right: 5px;
+    width: 16px;
+    height: 23px;
+    line-height: 23px;
 }
+
+/* .list_view th:last-child .th_drag_handle {
+    display: none;
+} */
 
 .list_view .table_body {
     /* opacity: 1; */
@@ -319,14 +336,6 @@ body {
 
 .list_view td .input {
     width: 100%;
-}
-
-.list_view .sor_div {
-    border: 1px solid var(--border);
-    position: relative;
-    float: right;
-    width: 16px;
-    height: 16px;
 }
 
 /* Progress input */
