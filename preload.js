@@ -2837,10 +2837,6 @@ class ViewManager {
                 Type: 0,
                 Size: 0,
                 Count: 0
-            },
-            Sort: {
-                by: 'Name',
-                order: 'asc'
             }
         }
 
@@ -3562,13 +3558,24 @@ class ViewManager {
         let column = e.target.classList[0];
 
         // sort by column
-        let sort_order = "desc";
+        let sort_by = 'name';
+        let sort_order = 'asc';
+
         if (settings.Sort) {
+            // if settings exist
+            sort_by = column.toLocaleLowerCase(); //settings.Sort.by;
             sort_order = settings.Sort.order;
+        } else {
+            // if no sort settings set default sort settings
+            settings.Sort = {
+                by: sort_by,
+                order: sort_order
+            }
         }
+
         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
 
-        settings.Sort.by = column.toLocaleLowerCase();
+        settings.Sort.by = sort_by; //column.toLocaleLowerCase();
         settings.Sort.order = sort_order;
         ipcRenderer.send('save_settings', settings);
         this.getListView();
@@ -3655,7 +3662,6 @@ class ViewManager {
                 if (th.classList[0] !== 'Count') {
                     this.list_view_settings.col_width[th.classList[0]] = th.offsetWidth;
                 }
-                // this.list_view_settings.col_width[th.classList[0]] = th.offsetWidth;
             })
             ipcRenderer.send('update_list_view_settings', this.list_view_settings);
 
@@ -3741,9 +3747,7 @@ class ViewManager {
                     headerRow.appendChild(th);
 
                     ipcRenderer.invoke('get_list_view_settings').then(settings => {
-                        // console.log('settings', settings)
                         if (settings['col_width'][header] !== undefined && settings['col_width'][header] !== 0) {
-                            // console.log('setting width', settings['col_width'][header])
                             th.style.width = `${settings['col_width'][header]}px`;
                         }
                     })
@@ -3752,31 +3756,12 @@ class ViewManager {
 
                     // sort by header
                     th.addEventListener('click', this.sortColumn);
-                    // th.addEventListener('click', (e) => {
-                    //     if (!this.isResizing) {
-                    //         console.log('sorting by column', header, this.isResizing)
-                    //         e.preventDefault();
-                    //         e.stopImmediatePropagation();
-                    //         e.stopPropagation();
-                    //         // sort by column
-                    //         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
-                    //         settings.Sort.by = header.toLocaleLowerCase();
-                    //         settings.Sort.order = sort_order;
-                    //         ipcRenderer.send('save_settings', settings);
-                    //         this.getListView();
-                    //     }
-                    // });
-
 
                     th.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         ipcRenderer.send('columns_menu', header);
                     })
-
-                    // } else {
-
-                    // }
 
                 });
 
@@ -3791,13 +3776,10 @@ class ViewManager {
 
             tbody.classList.add('tbody_new');
 
-            // table.classList.add('new_table', 'hidden');
-
             // map columns
             let mapped_columns = this.getMappedColumns();
 
             // filter hidden files
-            // console.log(settings)
             if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
                 dirents = dirents.filter((dirent) => !dirent.is_hidden);
             }
@@ -3853,9 +3835,6 @@ class ViewManager {
             hide_loader();
 
         })
-        // .catch(err => {
-        //     console.log(err)
-        // })
 
     }
 
