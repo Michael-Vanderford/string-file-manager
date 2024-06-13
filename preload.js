@@ -3575,6 +3575,7 @@ class ViewManager {
 
         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
 
+
         settings.Sort.by = sort_by; //column.toLocaleLowerCase();
         settings.Sort.order = sort_order;
         ipcRenderer.send('save_settings', settings);
@@ -3934,13 +3935,21 @@ class ViewManager {
         const hidden_directories = dirents.filter(x => x.is_dir === true && x.is_hidden);
         const files = dirents.filter(x => x.is_dir === false && x.is_hidden !== true);
         const hidden_files = dirents.filter(x => x.is_dir === false && x.is_hidden);
-
         const show_hidden = localStorage.getItem('show_hidden');
-        // console.log('show hidden', show_hidden)
+
         if (show_hidden === '1') {
             dirents_arr.push(directories, hidden_directories, files, hidden_files)
         } else {
             dirents_arr.push(directories, files)
+        }
+
+        // check if sort settings exist
+        if (!settings.Sort) {
+            settings.Sort = {
+                by: 'name',
+                order: 'asc'
+            }
+            ipcRenderer.send('save_settings', settings);
         }
 
         dirents_arr.forEach(arr => {
