@@ -505,8 +505,13 @@ class Utilities {
 
         this.active_tab_content = document.querySelector('.active-tab-content');
         this.location = document.querySelector('.location');
+        this.sidebar = document.querySelector('.sidebar');
+        this.main = document.querySelector('.main');
+
         this.timeout_id = 0;
         this.msg_timeout_id = 0;
+
+        this.initSidebarResize();
 
         this.filter = document.querySelector('.filter');
         this.quick_search_sting = '';
@@ -523,6 +528,26 @@ class Utilities {
         });
 
     }
+
+    async initSidebarResize() {
+
+        let window_settings = await ipcRenderer.invoke('get_window_settings');
+
+        // if sidebar width is not set, set it to 350
+        if (!window_settings.sidebar_width) {
+            window_settings.sidebar_width = 350;
+            window_settings.main_width = 0;
+            ipcRenderer.send('update_window_settings', window_settings);
+        }
+
+        // Set sidebar width
+        this.sidebar.style.width = `${window_settings.sidebar_width}px`;
+        this.main.style.width = `calc(100% - ${window_settings.sidebar_width}px)`;
+        console.log('sidebar width', window_settings.sidebar_width)
+
+    }
+
+
 
     /**
      * Get Card for Grid View
@@ -4842,6 +4867,8 @@ class WorkspaceManager {
 
 }
 
+
+
 // Get reference to File Operations
 let fileOperations = new FileOperations();
 let viewManager = null; //new ViewManager();
@@ -7757,7 +7784,6 @@ window.addEventListener('DOMContentLoaded', (e) => {
             })
         })
 
-
         /////////////////////////////////////////////////////////////////
 
         // Main Context Menu
@@ -7824,7 +7850,7 @@ window.addEventListener('DOMContentLoaded', (e) => {
         resizeHandle.addEventListener("mousedown", startResize);
 
         // Function to handle the resize action
-        function startResize(e) {
+        async function startResize(e) {
 
             // Get the initial mouse position
             const initialMousePos = e.clientX;
@@ -7837,16 +7863,20 @@ window.addEventListener('DOMContentLoaded', (e) => {
             document.addEventListener("mousemove", resize);
             document.addEventListener("mouseup", stopResize);
 
-            main.classList.add('margin_left')
+            main.classList.add('margin_left');
+
+            let distanceMoved = 0;
+            let newSidebarWidth = 0;
+            let newMainWidth = 0;
 
             // Function to handle the resizing logic
             function resize(e) {
                 // Calculate the distance moved by the mouse
-                const distanceMoved = e.clientX - initialMousePos;
+                distanceMoved = e.clientX - initialMousePos;
 
                 // Calculate the new widths of sidebar and main divs
-                const newSidebarWidth = initialSidebarWidth + distanceMoved;
-                const newMainWidth = initialMainWidth - distanceMoved;
+                newSidebarWidth = initialSidebarWidth + distanceMoved;
+                newMainWidth = initialMainWidth - distanceMoved;
 
                 if (newSidebarWidth < 500) {
                     // Set the new widths
@@ -7857,7 +7887,7 @@ window.addEventListener('DOMContentLoaded', (e) => {
             }
 
             // Function to stop the resizing action
-            function stopResize() {
+            async function stopResize(e) {
 
                 document.removeEventListener("mousemove", resize);
                 document.removeEventListener("mouseup", stopResize);
@@ -7865,13 +7895,20 @@ window.addEventListener('DOMContentLoaded', (e) => {
                 // console.log('testing', sidebar.style.width)
                 localStorage.setItem('sidebar_width', sidebar.style.width)
 
+                let window_settings = await ipcRenderer.invoke('get_window_settings');
+                window_settings.sidebar_width = newSidebarWidth;
+                window_settings.main_width = newMainWidth;
+                ipcRenderer.send('update_window_settings', window_settings);
+
+                console.log('window_settings', window_settings)
+
             }
         }
 
-        if (localStorage.getItem("sidebar_width") !== null) {
-            // console.log(localStorage.getItem("sidebar_width"));
-            sidebar.style.width = localStorage.getItem("sidebar_width")
-        }
+        // if (localStorage.getItem("sidebar_width") !== null) {
+        //     // console.log(localStorage.getItem("sidebar_width"));
+        //     sidebar.style.width = localStorage.getItem("sidebar_width")
+        // }
 
 
     } catch (err) {

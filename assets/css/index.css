@@ -31,6 +31,7 @@ body {
 
 .wrapper {
     /* border: 1px solid red; */
+    /* box-sizing: border-box; */
     display: flex;
     width: 100%;
     height: 100%;
@@ -317,6 +318,7 @@ body {
 }
 
 .list_view td .display_name {
+    padding-left: 5px;
     width: 90%;
 }
 

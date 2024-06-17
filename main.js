@@ -217,24 +217,32 @@ class SettingsManager {
             }
         };
 
+        ipcMain.handle('get_window_settings', (e) => {
+            return this.getWindowSetting();
+        })
+
+        ipcMain.on('update_window_settings', (e, window_settings) => {
+            this.updateWindowSettings(window_settings);
+        });
+
         // init list view settings
         this.list_view_file = path.join(app.getPath('userData'), 'list_view.json');
         this.list_view_settings = {};
 
-        ipcMain.on('show_menubar', (e) => {
-            this.getSettings();
-            this.showMenubar();
-        })
-
         // return list view settings
         ipcMain.handle('get_list_view_settings', (e) => {
             return this.getListViewSetting();
-        })
+        });
 
         // update list view settings
         ipcMain.on('update_list_view_settings', (e, list_view_settings) => {
             this.updateListViewSettingSettings(list_view_settings);
-        })
+        });
+
+        ipcMain.on('show_menubar', (e) => {
+            this.getSettings();
+            this.showMenubar();
+        });
 
     }
 
