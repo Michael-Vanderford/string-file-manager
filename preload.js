@@ -5149,9 +5149,10 @@ ipcRenderer.on('merge_files', (e, merge_arr, is_move) => {
             merge_action_all.addEventListener('change', (e) => {
                 let target = e.target;
                 let select = table.querySelectorAll('select');
-                select.forEach(item => {
+                select.forEach((item, idx) => {
                     item.selectedIndex = target.selectedIndex;
                     item.value = target.value;
+                    merge_arr[idx].action = target.value;
                 })
             })
 
