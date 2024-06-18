@@ -1341,10 +1341,12 @@ class Utilities {
         // bypass firing on input elements
         if (document.activeElement.tagName.toLowerCase() !== 'input') {
 
-            if (e.ctrlKey || e.key === 'Tab') {
+            if (e.ctrlKey || e.key === 'Tab' || e.shiftKey || e.metaKey) {
+
                 if (e.ctrlKey && e.key.toLocaleLowerCase() === 'l') {
                     this.location.focus();
                 }
+
             } else if (e.key === 'Backspace' && document.activeElement === this.filter) {
 
                 console.log('backspace', document.activeElement)
