@@ -307,18 +307,20 @@ function get_files_arr(source, destination, callback) {
         for (let i = 0; i < dirents.length; i++) {
 
             let file = dirents[i]
-            if (file.is_dir && !file.is_symlink) {
-                get_files_arr(file.href, path.format({ dir: destination, base: file.name }), callback)
-            } else {
-                let file_obj = {
-                    type: 'file',
-                    source: file.href,
-                    destination: path.format({ dir: destination, base: file.name }),
-                    size: file.size,
-                    is_symlink: file.is_symlink,
-                    file: file
+            if (!file.is_symlink) {
+                if (file.is_dir) {
+                    get_files_arr(file.href, path.format({ dir: destination, base: file.name }), callback)
+                } else {
+                    let file_obj = {
+                        type: 'file',
+                        source: file.href,
+                        destination: path.format({ dir: destination, base: file.name }),
+                        size: file.size,
+                        is_symlink: file.is_symlink,
+                        file: file
+                    }
+                    file_arr.push(file_obj)
                 }
-                file_arr.push(file_obj)
             }
 
         }
@@ -1008,7 +1010,7 @@ parentPort.on('message', data => {
                     }
                     // console.log(data)
                     parentPort.postMessage(close_progress);
-                    return;
+                    // return;
                 }
 
                 let copy_item = copy_arr[idx];
@@ -1076,10 +1078,9 @@ parentPort.on('message', data => {
                             for (let i = 0; i < dirents.length; i++) {
                                 let f = dirents[i]
                                 if (f.type == 'directory') {
-                                    cpc++
                                     if (!gio.exists(f.destination)) {
                                         try {
-
+                                            cpc++
                                             gio.cp(f.source, f.destination);
                                             // // gio.mkdir(f.destination)
                                             // data = {
@@ -1112,16 +1113,14 @@ parentPort.on('message', data => {
                             for (let i = 0; i < dirents.length; i++) {
                                 let f = dirents[i]
                                 if (f.type == 'file') {
-                                    cpc++
                                     if (gio.exists(f.destination)) {
                                         // gio.cp(f.source, f.destination, copy_item.overwrite_flag)
                                     } else {
                                         try {
 
                                             gio.cp_async(f.source, f.destination, (res) => {
-
+                                                cpc++
                                                 const current_time = Date.now();
-
                                                 bytes_copied0 = bytes_copied;
 
                                                 if (res.bytes_copied > 0) {

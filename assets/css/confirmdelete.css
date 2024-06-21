@@ -1,12 +1,12 @@
 html, body {
+    /* border: 1px solid var(--border); */
     background: var(--main);
-    overflow: hidden;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 11px;
     height: 100%;
+    width: 100%;
 }
 
 #confirm_delete {
+    /* border: 1px solid var(--border); */
     color: var(--text);
     padding-top: 20px;
     padding-left: 40px;
@@ -22,9 +22,9 @@ html, body {
     background: var(--dialog);
     padding: 5px;
     margin-top: 15px;
-    width: 100%;
+    /* width: 100%; */
     height: 75%;
-    overflow: auto;
+    /* overflow: auto; */
     word-break: break-all;
 
 }

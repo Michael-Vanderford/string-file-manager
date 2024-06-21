@@ -924,13 +924,13 @@ namespace gio {
         GList* iter;
         GList *network_mounts;
         GList* mounts; // = g_volume_monitor_get_mounts(monitor);
-        GMount* mount;
+        GMount *mount, *volume_mount;
         GList* drives;
         GDrive* drive;
         GList* volumes;
         GVolume* volume;
-        GFile *root;
-        char *type = nullptr, *identifier = nullptr, *path = nullptr, *name = nullptr;
+        GFile *root, *volume_root;
+        char *type = nullptr, *identifier = nullptr, *path = nullptr, *name = nullptr, *mount_uri = nullptr;
         int c = 0;
 
         mounts = g_volume_monitor_get_mounts(monitor);
@@ -957,10 +957,17 @@ namespace gio {
 
                 if (volume != NULL) {
                     type = g_volume_get_identifier(volume, G_VOLUME_IDENTIFIER_KIND_CLASS);
+
+                    // volume_mount = g_volume_get_mount(volume);
+                    // volume_root = g_mount_get_root(volume_mount);
+                    // mount_uri = g_file_get_uri(volume_root);
+                    // Nan::Set(dataObj, Nan::New("mount").ToLocalChecked(), Nan::New(mount_uri).ToLocalChecked());
+
                 }
                 if (type == NULL) {
                     type = "network";
                 }
+
                 Nan::Set(dataObj, Nan::New("type").ToLocalChecked(), Nan::New(type).ToLocalChecked());
                 Nan::Set(resultArray, c, dataObj);
                 c++;

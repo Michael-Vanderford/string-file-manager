@@ -3564,8 +3564,8 @@ class ViewManager {
         let active_tab_content = document.querySelector('.active-tab-content');
         let tbody = active_tab_content.querySelector('.table_body');
 
-        const last_idx = Math.min(this.chunk_idx + this.chunk_size, fileOperations.dirents.length);
-        const chunk = fileOperations.dirents.slice(this.chunk_idx, last_idx);
+        const last_idx = Math.min(this.chunk_idx + this.chunk_size, this.files_arr.length);
+        const chunk = this.files_arr.slice(this.chunk_idx, last_idx);
 
         console.log('chunk', chunk, this.chunk_idx, last_idx)
 
@@ -3574,9 +3574,27 @@ class ViewManager {
             tbody.appendChild(tr);
         });
 
+        // Remove items that are no longer visible
+        this.removeInvisibleItems();
+
         this.chunk_idx = last_idx;
         this.lazyload();
 
+    }
+
+    removeInvisibleItems() {
+        let active_tab_content = document.querySelector('.active-tab-content');
+        let tbody = active_tab_content.querySelector('.table_body');
+
+        const visibleStartIndex = Math.max(0, this.chunk_idx - this.chunk_size);
+        const visibleEndIndex = this.chunk_idx;
+
+        Array.from(tbody.children).forEach((tr, idx) => {
+            const fileIndex = parseInt(tr.getAttribute('data-idx'), 10);
+            if (fileIndex < visibleStartIndex || fileIndex >= visibleEndIndex) {
+                tbody.removeChild(tr);
+            }
+        });
     }
 
     sortColumn (e) {
@@ -3839,33 +3857,28 @@ class ViewManager {
                 }
             });
 
-            // fileOperations.dirents = this.sort(dirents);
             this.files_arr = this.sort(dirents);
 
             // populate data
-            // fileOperations.dirents.forEach((file) => {
-            this.files_arr.forEach((file) => {
-
-                let tr = this.getTableRow(file)
-                tbody.appendChild(tr);
-                // tr.classList.remove('new_tr');
-            });
-
-            // this.chunk_load();
-            tbody.classList.remove('tbody_new');
-            if (list_view_table) {
-                // list_view_table.classList.remove('pre');
-                list_view_table.classList.add('post');
-            }
-
-            // active_tab_content.addEventListener('scroll', (e) => {
-            //     console.log('scrolling')
-            //     if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
-            //         if (this.chunk_idx < fileOperations.dirents.length) {
-            //             this.chunk_load();
-            //         }
-            //     }
+            // this.files_arr.forEach((file) => {
+            //     let tr = this.getTableRow(file)
+            //     tbody.appendChild(tr);
             // });
+
+            this.chunk_load();
+            // tbody.classList.remove('tbody_new');
+            // if (list_view_table) {
+            //     list_view_table.classList.add('post');
+            // }
+
+            active_tab_content.addEventListener('scroll', (e) => {
+                console.log('scrolling')
+                if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
+                    if (this.chunk_idx < fileOperations.dirents.length) {
+                        this.chunk_load();
+                    }
+                }
+            });
 
 
             let icon_size = iconManager.getIconSize();
@@ -4652,6 +4665,10 @@ class DeviceManager {
             type = 'phone'
         } else if (path.match('sftp://')) {
             type = 'network'
+        } else if (path.match('usb://')) {
+            type = 'usb'
+        } else {
+            type = 'drive'
         }
         return type;
     }
@@ -4740,14 +4757,16 @@ class DeviceManager {
 
                     }
 
-
                     item.classList.add('item');
                     item.addEventListener('click', (e) => {
                         e.preventDefault();
                         viewManager.getView(device.path);
                     })
 
-                    let type = device.type //this.get_type(device.path);
+                    let type = this.get_type(device.path);
+
+                    console.log(device)
+
                     if (type === 'phone') {
                         icon_div.append(add_icon('phone'), a);
                     } else if (type === 'network') {
