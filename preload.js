@@ -2881,7 +2881,7 @@ class ViewManager {
 
         this.idx = -1;
 
-        this.chunk_size = 20;
+        this.chunk_size = 1000;
         this.chunk_idx = 0;
 
         this.initialX = 0;
