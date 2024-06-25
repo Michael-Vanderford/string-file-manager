@@ -2881,7 +2881,7 @@ class ViewManager {
 
         this.idx = -1;
 
-        this.chunk_size = 1000;
+        this.chunk_size = 100;
         this.chunk_idx = 0;
 
         this.initialX = 0;
@@ -3569,31 +3569,41 @@ class ViewManager {
 
         console.log('chunk', chunk, this.chunk_idx, last_idx)
 
-        chunk.forEach((file) => {
+        chunk.forEach((file, idx) => {
             let tr = this.getTableRow(file);
             tbody.appendChild(tr);
         });
 
         // Remove items that are no longer visible
-        this.removeInvisibleItems();
+        // this.chunk_unload();
 
         this.chunk_idx = last_idx;
         this.lazyload();
 
     }
 
-    removeInvisibleItems() {
+    chunk_unload() {
         let active_tab_content = document.querySelector('.active-tab-content');
+        if (!active_tab_content) return; // Guard clause in case the active tab content is not found
+
         let tbody = active_tab_content.querySelector('.table_body');
+        if (!tbody) return; // Guard clause in case the table body is not found
 
         const visibleStartIndex = Math.max(0, this.chunk_idx - this.chunk_size);
         const visibleEndIndex = this.chunk_idx;
 
+        // Collect rows to remove
+        let rowsToRemove = [];
         Array.from(tbody.children).forEach((tr, idx) => {
-            const fileIndex = parseInt(tr.getAttribute('data-idx'), 10);
-            if (fileIndex < visibleStartIndex || fileIndex >= visibleEndIndex) {
-                tbody.removeChild(tr);
+            // Check if the row index is outside the visible range
+            if (idx < visibleStartIndex || idx >= visibleEndIndex) {
+                rowsToRemove.push(tr);
             }
+        });
+
+        // Remove collected rows
+        rowsToRemove.forEach(tr => {
+            tbody.removeChild(tr);
         });
     }
 

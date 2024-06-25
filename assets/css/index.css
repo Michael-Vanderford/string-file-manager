@@ -1691,6 +1691,7 @@ input[type=text]:focus {
         /* --highlight-select: rgba(0, 0, 0, 0.1); */
         --highlight: #e1edfb;
         --highlight-select: #e1edfb;
+        --highlight-active: #333333;
 
         --black: #000000;
         --white: #FFFFFF;
