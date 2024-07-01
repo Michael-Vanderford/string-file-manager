@@ -516,16 +516,20 @@ class Utilities {
         this.filter = document.querySelector('.filter');
         this.quick_search_sting = '';
 
-        this.initFilterListener();
-        this.filter.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-            this.filterFiles(e);
-        })
+        this.initFilter();
 
         // Clear Folder Size
         ipcRenderer.on('clear_folder_size', (e, href) => {
             this.clearFolderSize(href);
         });
+
+        this.specialKeys = [
+            'ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter', 'Shift', 'Backspace',
+            'Tab', 'PageUp', 'PageDown', 'Home', 'End', 'Control', 'Alt', 'Meta', 'Escape',
+            'CapsLock', 'Insert', 'Delete', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8',
+            'F9', 'F10', 'F11', 'F12', 'ScrollLock', 'Pause', 'ContextMenu', 'PrintScreen',
+            'NumLock'
+          ];
 
     }
 
@@ -546,8 +550,6 @@ class Utilities {
         console.log('sidebar width', window_settings.sidebar_width)
 
     }
-
-
 
     /**
      * Get Card for Grid View
@@ -674,15 +676,25 @@ class Utilities {
         card.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // if (e.ctrlKey) {
-                if (card.classList.contains('highlight_select')) {
-                    card.classList.remove('highlight_select')
-                    utilities.getSelectedCount();
-                } else {
-                    card.classList.add('highlight_select')
-                    utilities.getSelectedCount();
-                }
-            // }
+
+            if (e.ctrlKey) {
+                card.classList.toggle('highlight_select');
+                utilities.getSelectedCount();
+            } else {
+                clearHighlight();
+                card.classList.add('highlight_select');
+                utilities.getSelectedCount();
+            }
+
+            // // if (e.ctrlKey) {
+            //     if (card.classList.contains('highlight_select')) {
+            //         card.classList.remove('highlight_select')
+            //         utilities.getSelectedCount();
+            //     } else {
+            //         card.classList.add('highlight_select')
+            //         utilities.getSelectedCount();
+            //     }
+            // // }
         })
 
         card.addEventListener('dragstart', (e) => {
@@ -1323,108 +1335,107 @@ class Utilities {
 
     }
 
-    // todo implement this
-    initFilterListener() {
-        // filter / quick search
+    initFilter() {
+
         this.filter.classList.add('empty');
-        document.addEventListener('keydown', (e) => {
-            this.filterFiles(e);
+
+        // if filter active then handle ctrl+v
+        this.filter.addEventListener('paste', (e) => {
+            this.runFiler();
+        })
+
+        this.filter.addEventListener('input', (e) => {
+            this.runFiler();
         });
+
+        document.addEventListener('keydown', (e) => {
+
+            if (document.activeElement.tagName.toLowerCase() === 'input') {
+                return;
+            }
+
+            if (e.ctrlKey && e.key === 'v'
+                || e.ctrlKey && e.key === 'c'
+                || e.ctrlKey && e.key === 'x'
+                || e.ctrlKey && e.key === 'a'
+                || e.ctrlKey && e.key === 'z')
+            {
+                return;
+            }
+
+            if (this.specialKeys.includes(e.key)) {
+                return;
+            }
+
+            if (e.ctrlKey && e.key === 'l') {
+                this.location.focus();
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                this.clearFilter();
+            }
+            if (!this.specialKeys.includes(e.key) && document.activeElement !== this.filter) {
+                if (e.key.match(/[a-z0-9-_.]/i)) {
+                    this.filter.focus();
+                    this.filter.classList.remove('empty');
+                    this.quick_search_sting += e.key;
+                    this.runFiler();
+                }
+            }
+        });
+
     }
 
-    filterFiles (e) {
+    runFiler() {
 
-        this.active_tab_content = document.querySelector('.active-tab-content');
-        let cards = this.active_tab_content.querySelectorAll('.card, .tr');
+        setTimeout(() => {
 
-        // converted quick to a editable div so this line works properly
-        // bypass firing on input elements
-        if (document.activeElement.tagName.toLowerCase() !== 'input') {
+            this.filter.focus();
+            this.filter.classList.remove('empty');
 
-            if (e.ctrlKey || e.key === 'Tab' || e.shiftKey || e.metaKey) {
+            this.quick_search_sting = this.filter.innerText;
 
-                if (e.ctrlKey && e.key.toLocaleLowerCase() === 'l') {
-                    this.location.focus();
-                }
+            if (this.quick_search_sting === '') {
+                this.clearFilter();
+            }
 
-            } else if (e.key === 'Backspace' && document.activeElement === this.filter) {
+            if (this.quick_search_sting.match(/[a-z0-9-_.]/i)) {
 
-                console.log('backspace', document.activeElement)
-
-                this.quick_search_sting = this.filter.innerText.slice(0, -1);
-                console.log('backspace', this.quick_search_sting)
-
+                let cards = this.active_tab_content.querySelectorAll('.card, .tr');
                 cards.forEach((card) => {
                     if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
                         card.classList.remove('hidden');
                     } else {
+                        card.classList.remove('highlight_select');
                         card.classList.add('hidden');
                     }
                 })
 
-                if (this.quick_search_sting === '') {
-                    // is_quick_search = 0;
-                    this.filter.classList.add('empty');
-                    cards.forEach(card => {
-                        card.classList.remove('hidden');
-                    })
-                }
-
-            } else {
-
-                // let cards = this.active_tab_content.querySelectorAll('.card, .tr');
-                // check if key is a letter or number
-                // filter anything that is not a letter or number
-
-                if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
-                    this.filter.focus();
-                    this.filter.classList.remove('empty');
-                    is_quick_search = 1;
-                    this.quick_search_sting += e.key;
-                    cards.forEach((card) => {
-                        if (card.dataset.name.toLocaleLowerCase().includes(this.quick_search_sting)) {
-                            // card.classList.remove('hidden');
-                        } else {
-                            card.classList.remove('highlight_select');
-                            card.classList.add('hidden');
-                        }
-                    })
-                    // this.filter.value = this.quick_search_sting;
-
-                }
-
-                if ((e.key === 'Enter' || e.key === 'Escape' || e.key === 'ArrowDown') && document.activeElement === this.filter) {
-
-                    is_quick_search = 0;
-
-                    // this.quick_search_sting = '';
-                    // this.filter.innerText = '';
-
-                    let active_href = this.active_tab_content.querySelector('.header a, .display_name a');
-                    if (active_href) {
-                        let card = active_href.closest('.card, .tr');
-                        card.classList.add('highlight_select');
-                        active_href.focus();
-                    } else {
-                        utilities.msg('Error: No items found');
-                    }
-
-                }
-
             }
 
-            navigation.getCardGroups();
+        }, 100);
 
-        }
-
-    };
+    }
 
     clearFilter() {
+
+        let cards = this.active_tab_content.querySelectorAll('.card, .tr');
+        cards.forEach((card) => {
+            card.classList.remove('hidden');
+        })
+
         let filter = document.querySelector('.filter');
         if (filter) {
             filter.innerText = '';
             filter.classList.add('empty');
         }
+    }
+
+    // clear active tab content
+    clearActiveTabContent() {
+        let active_tab_content = document.querySelector('.active-tab-content');
+        active_tab_content.innerHTML = '';
     }
 
 
@@ -1472,6 +1483,7 @@ class IconManager {
         //         icon.style.height = `${icon_size}px`;
         //     // }
         // })
+
         let active_tab_content = document.querySelector('.active-tab-content');
         let icons = active_tab_content.querySelectorAll('.icon');
         icons.forEach(icon => {
@@ -1496,6 +1508,7 @@ class Navigation {
     constructor() {
 
         this.location = document.querySelector('.location');
+        this.sidebar = document.querySelector('.sidebar');
         this.card_count_arr = [];
 
         this.cardGroups = [];
@@ -1511,6 +1524,7 @@ class Navigation {
         this.nav_inc = 0;
         this.nav_group = 0;
         this.quick_search_sting = '';
+
         window.addEventListener('resize', (e) => {
             this.setIncrement();
         })
@@ -1697,14 +1711,13 @@ class Navigation {
             let workspace_view = add_div(['workspace_view']);
             let device_view = add_div(['device_view']);
 
-
             // Get Home
             this.getHome(home => {
                 home_view.append(home)
             })
 
             // Workspace
-            getWorkspace(workspace => {
+            workspaceManager.getWorkspace(workspace => {
                 workspace_view.append(workspace)
             })
 
@@ -1793,12 +1806,16 @@ class Navigation {
             })
 
             item.addEventListener('click', (e) => {
-                let items = home.querySelectorAll('.item');
-                items.forEach(item => {
-                    item.classList.remove('active');
-                })
 
-                item.classList.add('active')
+                console.log('click', my_computer_paths_arr[i])
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                // clear all active content
+                utilities.clearActiveTabContent();
+
+                // handle click
                 if (href === 'Recent') {
                     ipcRenderer.send('get_recent_files', this.location.value);
                 } else {
@@ -1812,7 +1829,16 @@ class Navigation {
                         // this.addHistory(nav_path);
                     })
                 }
+
+                // handle highlight
+                let items = this.sidebar.querySelectorAll('.item');
+                items.forEach(item => {
+                    item.classList.remove('sidebar_active');
+                })
+                item.classList.add('sidebar_active')
+
             })
+
 
             item.draggable = true;
             item.addEventListener('dragenter', (e) => {
@@ -1945,6 +1971,7 @@ class Navigation {
                             popup.append(menu_item);
 
                             menu_item.addEventListener('click', (e) => {
+                                console.log('autocomplete dir',dir)
                                 viewManager.getView(dir);
                                 popup.remove();
                             })
@@ -2134,13 +2161,9 @@ class Navigation {
         let grids = ['folder_grid', 'hidden_folder_grid', 'file_grid', 'hidden_file_grid', 'list_view'];
         grids.forEach(grid => {
             let grid_item = active_tab_content.querySelector(`.${grid}`);
-            // console.log('grid item', grid_item)
             if (grid_item && !grid_item.classList.contains('hidden')) {
                 let cards = grid_item.querySelectorAll('.card, .tr');
-
                 let filtered_cards = Array.from(cards).filter(card => !card.classList.contains('hidden'));
-                console.log('filtered cards', filtered_cards.length )
-
                 if (filtered_cards.length > 0) {
                     this.cardGroups.push(filtered_cards);
                 }
@@ -2538,7 +2561,7 @@ class TabManager {
             tab.classList.add('active-tab');
             tab_content.classList.add('active-tab-content');
             tab_content.classList.remove('hidden');
-            navigation.getCardCount(); // get new card count for navigation
+            // navigation.getCardCount(); // get new card count for navigation
             navigation.getCardGroups();
 
             this.tab_id = parseInt(tab.dataset.id);
@@ -2606,7 +2629,7 @@ class TabManager {
 
         })
 
-        navigation.getCardCount(); // get new card count for navigation
+        // navigation.getCardCount(); // get new card count for navigation
         navigation.getCardGroups();
 
         if (label !== 'Home' && label !== 'Settings' && label !== 'Recent' && label !== 'Search Results') {
@@ -2901,8 +2924,8 @@ class ViewManager {
         this.resizeCol = this.resizeCol.bind(this);
         this.stopColResize = this.stopColResize.bind(this);
 
-        this.sort_asc_icon = add_icon('bi-caret-up-fill');
-        this.sort_desc_icon = add_icon('bi-caret-down-fill');
+        // this.sort_asc_icon = add_icon('bi-caret-up-fill');
+        // this.sort_desc_icon = add_icon('bi-caret-down-fill');
 
         // Update list view on column change
         ipcRenderer.on('get_list_view', (e) => {
@@ -3272,9 +3295,9 @@ class ViewManager {
             hidden_file_grid.id = 'hidden_file_grid';
         }
 
-        if (localStorage.getItem('show_hidden') !== null) {
+        if (settings['Hidden Files']) {
             let show_hidden_icon = document.querySelector('.show_hidden')
-            let show_hidden = parseInt(localStorage.getItem('show_hidden'));
+            let show_hidden = parseInt(settings['Hidden Files'].show);
             if (show_hidden) {
                 hidden_folder_grid.classList.remove('hidden');
                 hidden_file_grid.classList.remove('hidden');
@@ -3463,7 +3486,14 @@ class ViewManager {
         tr.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            tr.classList.toggle('highlight_select')
+            if (e.ctrlKey) {
+                tr.classList.toggle('highlight_select');
+                utilities.getSelectedCount();
+            } else {
+                clearHighlight();
+                tr.classList.add('highlight_select');
+                utilities.getSelectedCount();
+            }
         })
 
         tr.addEventListener('contextmenu', (e) => {
@@ -3522,19 +3552,20 @@ class ViewManager {
         });
 
         icon_div.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            // e.preventDefault();
+            // e.stopPropagation();
             if (is_dir) {
                 if (e.ctrlKey) {
-                    this.getView(file['href'], 1);
+                    this.getView(file.href, 1);
                 } else {
-                    this.getView(file['href']);
+                    console.log('getting view', file.href)
+                    this.getView(file.href);
                 }
                 tabManager.addTabHistory(file['href']);
             } else {
                 ipcRenderer.send('open', file['href']);
             }
-        })
+        });
 
         // add event listener to link
         link.addEventListener('click', (e) => {
@@ -3549,11 +3580,11 @@ class ViewManager {
             } else {
                 ipcRenderer.send('open', file['href']);
             }
-        })
+        });
 
         input.addEventListener('click', (e) => {
             e.stopPropagation();
-        })
+        });
 
         return tr;
 
@@ -3617,6 +3648,9 @@ class ViewManager {
         let sort_div = th.querySelector('.sort_div');
         let column = th.classList[0];
 
+        let sort_asc_icon = add_icon('bi-caret-up-fill');
+        let sort_desc_icon = add_icon('bi-caret-down-fill');
+
         // sort by column
         let sort_by = 'name';
         let sort_order = 'asc';
@@ -3637,14 +3671,14 @@ class ViewManager {
 
         // handle sort direction icons
         let sort_divs = document.querySelectorAll('.sort_div');
-        sort_divs.forEach(div => {
-            div.innerHTML = '';
+        sort_divs.forEach(sort_div => {
+            sort_div.innerHTML = '';
         })
-        sort_div.innerHTML = '';
+
         if (sort_order === 'asc') {
-            sort_div.append(this.sort_asc_icon);
+            sort_div.append(sort_asc_icon);
         } else {
-            sort_div.append(this.sort_desc_icon);
+            sort_div.append(sort_desc_icon);
         }
 
         settings.Sort.by = sort_by; //column.toLocaleLowerCase();
@@ -3773,6 +3807,8 @@ class ViewManager {
             let th = active_tab_content.querySelector("thead");
             if (!th) {
 
+                console.log('adding new header')
+
                 // add div to hold data
                 let list_container = add_div();
                 list_container.innerHTML = data;
@@ -3811,11 +3847,14 @@ class ViewManager {
 
                     // handle sort direction icon
                     if (settings.Sort && settings.Sort.by === header.toLowerCase()) {
+                        let sort_asc_icon = add_icon('bi-caret-up-fill');
+                        let sort_desc_icon = add_icon('bi-caret-down-fill');
                         if (sort_order === 'asc') {
-                            sort_div.append(this.sort_asc_icon);
+                            sort_div.append(sort_asc_icon);
                         } else {
-                            sort_div.append(this.sort_desc_icon);
+                            sort_div.append(sort_desc_icon);
                         }
+
                     }
 
                     ipcRenderer.invoke('get_list_view_settings').then(settings => {
@@ -3849,13 +3888,12 @@ class ViewManager {
             tbody.classList.add('tbody_new');
 
             // map columns
-            let mapped_columns = this.getMappedColumns();
+            // let mapped_columns = this.getMappedColumns();
 
             // filter hidden files
-            if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
-                dirents = dirents.filter((dirent) => !dirent.is_hidden);
-            }
-
+            // if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
+            //     dirents = dirents.filter((dirent) => !dirent.is_hidden);
+            // }
 
             dirents.sort((a, b) => {
                 if (a.is_dir && !b.is_dir) {
@@ -3870,31 +3908,40 @@ class ViewManager {
             this.files_arr = this.sort(dirents);
 
             // populate data
-            // this.files_arr.forEach((file) => {
-            //     let tr = this.getTableRow(file)
-            //     tbody.appendChild(tr);
-            // });
+            for (let i = 0; i < this.files_arr.length; i++) {
 
-            this.chunk_load();
+                let file = this.files_arr[i];
+                let tr = this.getTableRow(file)
+                if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
+                    if (file.is_hidden) {
+                        tr.classList.add('hidden');
+                    }
+                }
+                tbody.appendChild(tr);
+                tr.addEventListener('dblclick', (e) => {
+                    this.getView(file.href);
+                })
+            };
+
+            // this.chunk_load();
             // tbody.classList.remove('tbody_new');
             // if (list_view_table) {
             //     list_view_table.classList.add('post');
             // }
 
-            active_tab_content.addEventListener('scroll', (e) => {
-                console.log('scrolling')
-                if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
-                    if (this.chunk_idx < fileOperations.dirents.length) {
-                        this.chunk_load();
-                    }
-                }
-            });
-
+            // active_tab_content.addEventListener('scroll', (e) => {
+            //     console.log('scrolling')
+            //     if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
+            //         if (this.chunk_idx < fileOperations.dirents.length) {
+            //             this.chunk_load();
+            //         }
+            //     }
+            // });
 
             let icon_size = iconManager.getIconSize();
             iconManager.resizeIcons(icon_size);
 
-            utilities.getFolderSizes();
+            // utilities.getFolderSizes();
             navigation.getCardGroups();
 
             this.lazyload();
@@ -4001,7 +4048,11 @@ class ViewManager {
         const hidden_directories = dirents.filter(x => x.is_dir === true && x.is_hidden);
         const files = dirents.filter(x => x.is_dir === false && x.is_hidden !== true);
         const hidden_files = dirents.filter(x => x.is_dir === false && x.is_hidden);
-        const show_hidden = localStorage.getItem('show_hidden');
+
+        let show_hidden = '0';
+        if (settings['Hidden Files'] && settings['Hidden Files'].show) {
+            show_hidden = '1';
+        }
 
         if (show_hidden === '1') {
             dirents_arr.push(directories, hidden_directories, files, hidden_files)
@@ -4224,28 +4275,26 @@ class ViewManager {
                     item.classList.add('active')
                 })
 
-                localStorage.setItem('show_hidden', 1);
-
                 settingsManager.getSettings(settings => {
                     settings['Hidden Files'].show = true;
                     ipcRenderer.send('save_settings', settings);
                 })
 
             } else {
+
                 hidden_folder_grid.classList.add('hidden')
                 hidden_file_grid.classList.add('hidden')
                 show_hidden.forEach(item => {
                     item.classList.remove('active')
                 })
 
-                localStorage.setItem('show_hidden', 0);
-
                 settingsManager.getSettings(settings => {
                     settings['Hidden Files'].show = false;
                     ipcRenderer.send('save_settings', settings);
                 })
-
             }
+
+            this.getGridView();
 
         } else if (view === 'list') {
 
@@ -4256,9 +4305,12 @@ class ViewManager {
                     settings['Hidden Files'].show = true;
                 }
                 ipcRenderer.send('save_settings', settings)
+
+                this.getListView();
+
             })
 
-            this.getListView();
+
 
         }
 
@@ -4281,13 +4333,13 @@ class FileOperations {
 
             let st = new Date().getTime();
 
-            utilities.clearFilter();
+            console.log('running new ls', data)
 
             // set dirents for views
             this.dirents = data.dirents;
             viewManager.files_arr = data.dirents;
 
-            // let dirents = data.dirents;
+            let dirents = data.dirents;
             let source = data.source;
             let tab = data.tab;
             let display_name = data.display_name;
@@ -4431,11 +4483,13 @@ class FileOperations {
             viewManager.resize();
 
             // get number of cards in each div for keyboard navigation
-            navigation.getCardCount();
+            // navigation.getCardCount();
             navigation.getCardGroups();
 
             // hide_loader();
             clear();
+
+
 
         })
 
@@ -4656,11 +4710,14 @@ class DeviceManager {
 
     constructor() {
 
+        this.sidebar = document.querySelector('.sidebar');
         this.device_arr = [];
 
         ipcRenderer.send('get_devices');
 
         ipcRenderer.on('devices', (e, devices) => {
+
+            console.log('running devices')
 
             this.device_arr = devices;
             this.getDevices();
@@ -4685,167 +4742,145 @@ class DeviceManager {
 
     getDevices(callback) {
 
-        // let location = document.getElementById('location');
         let device_view = document.querySelector('.device_view');
         device_view.innerHTML = '';
 
-        // console.log('running get devices', device_view)
         if (device_view) {
 
-            // device_view = add_div(['device_view']);
             device_view.append(document.createElement('hr'));
 
-                this.device_arr.sort((a, b) => {
-                    // First, compare by 'type'
-                    if (a.type < b.type) return -1;
-                    if (a.type > b.type) return 1;
-                    return a.name.toLocaleLowerCase().localeCompare(b.name.toLocaleLowerCase());
-                })
+            this.device_arr.sort((a, b) => {
+                // First, compare by 'type'
+                if (a.type < b.type) return -1;
+                if (a.type > b.type) return 1;
+                return a.name.toLocaleLowerCase().localeCompare(b.name.toLocaleLowerCase());
+            })
 
-                this.device_arr.forEach(device => {
+            this.device_arr.forEach(device => {
 
-                    let item = add_div();
-                    let icon_div = add_div();
-                    let href_div = add_div();
-                    let umount_div = add_div();
+                let item = add_div();
+                let icon_div = add_div();
+                let href_div = add_div();
+                let umount_div = add_div();
 
-                    item.classList.add('flex');
-                    item.style = 'width: 100%;';
-                    href_div.classList.add('ellipsis');
-                    href_div.style = 'width: 70%';
+                item.classList.add('flex', 'item');
+                item.style = 'width: 100%;';
+                href_div.classList.add('ellipsis');
+                href_div.style = 'width: 70%';
 
-                    let device_path = device.path //.replace('file://', '');
+                let device_path = device.path //.replace('file://', '');
 
-                    let a = document.createElement('a');
-                    a.preventDefault = true;
-                    a.href = device_path; // device.path; //item.href;
-                    a.innerHTML = device.name;
+                let a = document.createElement('a');
+                a.preventDefault = true;
+                a.href = device_path; // device.path; //item.href;
+                a.innerHTML = device.name;
 
-                    let umount_icon = add_icon('eject-fill');
-                    umount_div.title = 'Unmount Drive'
-                    umount_icon.style = 'position: absolute; right: -30px;';
+                let umount_icon = add_icon('eject-fill');
+                umount_div.title = 'Unmount Drive'
+                umount_icon.style = 'position: absolute; right: -30px;';
 
-                    if (device.path === '') {
+                if (device.path === '') {
 
-                        // Mount
-                        umount_div.classList.add('inactive');
-                        umount_div.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            ipcRenderer.send('mount', device)
-                        })
-
-                        item.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            let root = device.root;
-                            ipcRenderer.send('mount', device)
-                        })
-
-                    } else {
-
-                        // Unmount
-                        umount_div.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            ipcRenderer.send('umount', device.path);
-                        })
-
-                        // Get view
-                        item.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-
-                            if (e.ctrlKey) {
-                                viewManager.getView(`${device_path}`, 1);
-                            } else {
-                                viewManager.getView(`${device_path}`);
-                            }
-                            // navigation.addHistory(device_path);
-                            tabManager.addTabHistory(device_path);
-
-                        })
-
-                    }
-
-                    item.classList.add('item');
-                    item.addEventListener('click', (e) => {
+                    // Mount
+                    umount_div.classList.add('inactive');
+                    umount_div.addEventListener('click', (e) => {
                         e.preventDefault();
-                        viewManager.getView(device.path);
+                        e.stopPropagation();
+                        ipcRenderer.send('mount', device)
                     })
 
-                    let type = this.get_type(device.path);
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        let root = device.root;
+                        ipcRenderer.send('mount', device)
+                    })
 
-                    console.log(device)
+                } else {
 
-                    if (type === 'phone') {
-                        icon_div.append(add_icon('phone'), a);
-                    } else if (type === 'network') {
-                        icon_div.append(add_icon('hdd-network'), a);
-                    } else {
-                        icon_div.append(add_icon('usb-symbol'), a);
+                    // Unmount
+                    umount_div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        ipcRenderer.send('umount', device.path);
+                    })
+
+                    // Get view
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        if (e.ctrlKey) {
+                            viewManager.getView(`${device_path}`, 1);
+                        } else {
+                            viewManager.getView(`${device_path}`);
+                        }
+                        // navigation.addHistory(device_path);
+                        tabManager.addTabHistory(device_path);
+
+                        // handle highlight
+                        let items = this.sidebar.querySelectorAll('.item');
+                        items.forEach(item => {
+                            item.classList.remove('sidebar_active');
+                        })
+                        item.classList.add('sidebar_active')
+
+                    })
+
+                }
+
+                let type = this.get_type(device.path);
+                if (type === 'phone') {
+                    icon_div.append(add_icon('phone'), a);
+                } else if (type === 'network') {
+                    icon_div.append(add_icon('hdd-network'), a);
+                } else {
+                    icon_div.append(add_icon('hdd'), a);
+                }
+
+                item.addEventListener('mouseover', (e) => {
+                    item.title = device_path;
+                })
+
+                item.addEventListener('contextmenu', (e) => {
+                    ipcRenderer.send('device_menu', device.path, device.uuid);
+                    item.classList.add('highlight_select');
+                })
+
+                href_div.append(a);
+                umount_div.append(umount_icon);
+
+                item.append(icon_div, href_div, umount_div);
+                device_view.append(item);
+
+                if (device.size_total) {
+
+                    let device_progress_container = add_div(['device_progress_container']);
+                    let device_progress = add_div(['device_progress']);
+
+                    let width = (parseInt(device.size_used) / parseInt(device.size_total)) * 100;
+                    device_progress.style = `width: ${width}%`;
+
+                    device_progress_container.append(device_progress);
+                    device_view.append(device_progress_container);
+
+                    if (width > 70) {
+                        device_progress.classList.add('size_warming');
+                    }
+
+                    if (width > 90) {
+                        device_progress.classList.add('size_danger');
                     }
 
                     item.addEventListener('mouseover', (e) => {
-                        item.title = device_path;
+                        item.title = `${device_path}\n Total: ${getFileSize(device.size_total * 1024)}\n Used: ${getFileSize(device.size_used * 1024)}`;
                     })
 
-                    item.addEventListener('contextmenu', (e) => {
-                        ipcRenderer.send('device_menu', device.path, device.uuid);
-                        item.classList.add('highlight_select');
-                    })
+                }
 
-                    href_div.append(a);
-                    umount_div.append(umount_icon);
+            })
 
-                    item.append(icon_div, href_div, umount_div);
-                    device_view.append(item);
+            this.device_arr = [];
 
-                    if (device.size_total) {
-
-                        let device_progress_container = add_div(['device_progress_container']);
-                        let device_progress = add_div(['device_progress']);
-
-                        let width = (parseInt(device.size_used) / parseInt(device.size_total)) * 100;
-                        device_progress.style = `width: ${width}%`;
-
-                        device_progress_container.append(device_progress);
-                        device_view.append(device_progress_container);
-
-                        if (width > 70) {
-                            device_progress.classList.add('size_warming');
-                        }
-
-                        if (width > 90) {
-                            device_progress.classList.add('size_danger');
-                        }
-
-                        item.addEventListener('mouseover', (e) => {
-                            item.title = `${device_path}\n Total: ${getFileSize(device.size_total * 1024)}\n Used: ${getFileSize(device.size_used * 1024)}`;
-                        })
-
-                        // progress.classList.add('device_progress');
-                        // progress.max = parseInt(device.size_total);
-                        // progress.value = parseInt(device.size_used);
-                        // devices.append(progress);
-
-                    }
-
-                })
-
-                this.device_arr = [];
-
-                // connect_btn.addEventListener('click', (e) => {
-                //     ipcRenderer.send('connect_dialog');
-                // })
-
-                // devices.append(document.createElement('br'), connect_btn)
-
-                // return callback(devices)
-                // return device_view;
-
-            // }).catch(err => {
-            //     console.log(err);
-            // })
         }
     }
 
@@ -4853,10 +4888,219 @@ class DeviceManager {
 
 class WorkspaceManager {
 
-    Workspace () {
+    constructor () {
+
+        this.sidebar = document.querySelector('.sidebar');
+
+        // Get Workspace
+        ipcRenderer.on('get_workspace', (e) => {
+            getWorkspace(() => {});
+        })
+
+        // Remove Workspace
+        ipcRenderer.on('remove_workspace', (e, href) => {
+            ipcRenderer.send('remove_workspace', (e, href));
+        })
+
+        // Rename Workspace
+        ipcRenderer.on('edit_workspace', (e, href) => {
+            // Edit workspace
+            editWorkspace(href);
+
+        })
+
+        this.getWorkspace(() => {});
 
     }
 
+    // Get Workspace
+    getWorkspace(callback) {
+
+        ipcRenderer.invoke('get_workspace').then(res => {
+
+            // add toggle for workspace items
+            let workspace_accordion = add_div(['workspace_accordion']);
+            let workspace_accordion_container = add_div(['workspace_accordion_container']);
+            let workspace_accordion_toggle = add_link('#', '');
+
+            workspace_accordion.append(workspace_accordion_toggle, 'Workspace');
+            workspace_accordion.append(workspace_accordion_container);
+
+            let workspace_toggle_icon = add_icon('chevron-down');
+            workspace_toggle_icon.classList.add('workspace_toggle');
+            workspace_accordion_toggle.append(workspace_toggle_icon);
+
+            let workspace = document.getElementById('workspace');
+            if (!workspace) {
+                workspace = add_div(); //document.getElementById('workspace');
+                workspace.id = 'workspace'
+                workspace.classList.add('workspace')
+            }
+            workspace.innerHTML = ''
+            // workspace.append(add_header('Workspace'));
+            workspace.append(document.createElement('hr'))
+
+            if (res.length == 0) {
+                workspace.append('Drop a file or folder');
+            }
+
+            workspace.addEventListener('mouseout', (e) => {
+                workspace.classList.remove('active')
+            })
+
+            workspace.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                workspace.classList.add('active')
+            })
+
+            workspace.addEventListener('dragleave', (e) => {
+                workspace.classList.remove('active')
+            })
+
+            workspace.addEventListener('drop', (e) => {
+                getSelectedFiles()
+                ipcRenderer.send('add_workspace', selected_files_arr);
+                clear()
+            })
+
+            workspace_accordion.addEventListener('click', (e) => {
+
+                workspace_accordion_container.classList.toggle('hidden');
+                if (workspace_accordion_container.classList.contains('hidden')) {
+                    workspace_toggle_icon.classList.add('bi-chevron-right');
+                    workspace_toggle_icon.classList.remove('bi-chevron-down');
+                } else {
+                    workspace_toggle_icon.classList.remove('bi-chevron-right');
+                    workspace_toggle_icon.classList.add('bi-chevron-down');
+                }
+
+            })
+
+            res.forEach(file => {
+
+                let workspace_div = add_div(['flex', 'item', 'workspace_div'])
+                let workspace_item = add_div(['workspace_item']);
+                let workspace_item_input = document.createElement('input');
+                let img = document.createElement('img')
+
+                img.classList.add('icon', 'icon16')
+                let a = document.createElement('a');
+                a.href = file.href;
+                a.innerHTML = file.name;
+                a.preventDefault = true;
+                workspace_item_input.classList.add('input', 'hidden');
+
+                workspace_div.dataset.href = file.href;
+                workspace_item_input.value = file.name;
+
+                if (file.content_type === 'inode/directory') {
+
+                    utilities.getFolderIcon(file).then(folder_icon_path => {
+                        img.src = folder_icon_path;
+                        workspace_item.append(a);
+                        workspace_div.append(img, workspace_item, workspace_item_input);
+                    })
+
+                    // img.src = folder_icon + 'folder.svg';
+                    // workspace_item.append(a);
+                    // workspace_div.append(img, workspace_item, workspace_item_input);
+                } else {
+                    ipcRenderer.invoke('get_icon', (file.href)).then(res => {
+                        img.src = res;
+                        workspace_item.append(a);
+                        workspace_div.append(img, workspace_item, workspace_item_input);
+                        // workspace_item.append(img, a);
+                    })
+                }
+
+                workspace_div.addEventListener('mouseover', (e) => {
+                    workspace_div.title = `${file.href} \n Rename (F2)`;
+                    a.focus();
+                })
+
+                // Show Workspace Context Menu
+                workspace_div.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    ipcRenderer.send('workspace_menu', file);
+                    workspace_div.classList.add('highlight');
+                });
+
+                // Open Workspace Item
+                workspace_div.addEventListener('click', (e) => {
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // clear active tab content
+                    utilities.clearActiveTabContent();
+
+                    // handle click
+                    if (file.is_dir) {
+                        if (e.ctrlKey) {
+                            // tabManager.addTabHistory();
+                            viewManager.getView(file.href, 1);
+                        } else {
+                            // tabManager.addTabHistory();
+                            viewManager.getView(file.href);
+                        }
+                    } else {
+                        ipcRenderer.send('open', file.href);
+                    }
+
+                    // add to history
+                    tabManager.addTabHistory(file.href);
+
+                    // handle highlight
+                    let items = this.sidebar.querySelectorAll('.item');
+                    items.forEach(item => {
+                        item.classList.remove('sidebar_active');
+                    })
+                    workspace_div.classList.add('sidebar_active')
+
+                })
+
+                // Edit workspace item
+                workspace_div.addEventListener('keyup', (e) => {
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (e.key === 'F2') {
+                        workspace_item_input.classList.remove('hidden');
+                        workspace_item.classList.add('hidden');
+                        workspace_item_input.focus();
+                        workspace_item_input.select();
+                    }
+                    if (e.key === 'Escape') {
+                        workspace_item_input.classList.add('hidden');
+                        workspace_item.classList.remove('hidden');
+                    }
+
+                })
+
+                workspace_item_input.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                })
+
+                workspace_item_input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        ipcRenderer.send('rename_workspace', file.href, e.target.value)
+                    }
+                })
+
+                // workspace_item.append(img, a);
+                workspace_accordion_container.append(workspace_div);
+                workspace.append(workspace_accordion);
+
+            })
+            return callback(workspace);
+
+        })
+    }
+
+
+    // edit workspace
     editWorkspace () {
 
         let workspace = document.querySelector('.workspace');
@@ -4898,10 +5142,105 @@ class WorkspaceManager {
 
 }
 
+class FilterFiles {
 
+    constructor() {
+        this.active_tab_content = document.querySelector('.active-tab-content');
+        this.cards = this.active_tab_content.querySelectorAll('.card, .tr');
+        this.filter = document.querySelector('.filter');
+        this.location = document.querySelector('.location');
+        this.quick_search_string = '';
+
+        // Bind event listener
+        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+    }
+
+    handleKeyDown(e) {
+        if (document.activeElement.tagName.toLowerCase() !== 'input') {
+            if (e.ctrlKey) {
+                this.handleCtrlKeys(e);
+            } else {
+                this.handleNonCtrlKeys(e);
+            }
+        }
+    }
+
+    handleCtrlKeys(e) {
+        switch (e.key.toLowerCase()) {
+            case 'l':
+                this.location.focus();
+                e.preventDefault(); // Prevent default browser behavior for Ctrl+L
+                break;
+            case 'v':
+                // Allow paste action
+                break;
+            default:
+                this.filter.classList.remove('empty');
+                break;
+        }
+    }
+
+    handleNonCtrlKeys(e) {
+        if (e.key === 'Tab' || e.shiftKey || e.metaKey) {
+            this.filter.classList.remove('empty');
+        } else if (e.key === 'Backspace' && document.activeElement === this.filter) {
+            this.handleBackspace();
+        } else if (e.key.length === 1 && e.key.match(/[a-z0-9-_.]/i)) {
+            this.handleCharacterInput(e.key);
+        } else if (['Enter', 'Escape', 'ArrowDown'].includes(e.key) && document.activeElement === this.filter) {
+            this.handleSpecialKeys(e.key);
+        }
+        navigation.getCardGroups();
+    }
+
+    handleBackspace() {
+        this.quick_search_string = this.filter.innerText.slice(0, -1);
+        this.updateCardVisibility();
+        if (this.quick_search_string === '') {
+            this.filter.classList.add('empty');
+            this.showAllCards();
+        }
+    }
+
+    handleCharacterInput(character) {
+        this.filter.focus();
+        this.filter.classList.remove('empty');
+        this.quick_search_string += character;
+        this.updateCardVisibility();
+    }
+
+    handleSpecialKeys(key) {
+        let active_href = this.active_tab_content.querySelector('.header a, .display_name a');
+        if (active_href) {
+            let card = active_href.closest('.card, .tr');
+            card.classList.add('highlight_select');
+            active_href.focus();
+        } else {
+            utilities.msg('Error: No items found');
+        }
+    }
+
+    updateCardVisibility() {
+        this.cards.forEach((card) => {
+            if (card.dataset.name.toLowerCase().includes(this.quick_search_string)) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.remove('highlight_select');
+                card.classList.add('hidden');
+            }
+        });
+    }
+
+    showAllCards() {
+        this.cards.forEach(card => {
+            card.classList.remove('hidden');
+        });
+    }
+
+}
 
 // Get reference to File Operations
-let fileOperations = new FileOperations();
+let fileOperations = null; //new FileOperations();
 let viewManager = null; //new ViewManager();
 let settings = null;
 let settingsManager = null;
@@ -4913,14 +5252,15 @@ let workspaceManager = null;
 let deviceManager = null;
 
 window.addEventListener('DOMContentLoaded', (e) => {
+    fileOperations = new FileOperations();
     viewManager = new ViewManager();
     settingsManager = new SettingsManager();
     iconManager = new IconManager();
     tabManager = new TabManager();
+    workspaceManager = new WorkspaceManager();
     navigation = new Navigation();
     utilities = new Utilities();
     // utilities.autoComplete();
-    workspaceManager = new WorkspaceManager();
     deviceManager = new DeviceManager();
 
 })
@@ -5219,10 +5559,13 @@ ipcRenderer.on('get_folder_size', (e, href) => {
 
 // Update thumbnails
 ipcRenderer.on('get_thumbnail', (e, href, thumbnail) => {
-
     let card = document.querySelector(`[data-href="${href}"]`);
-    let img = card.querySelector('img');
-    img.src = thumbnail
+    if (card) {
+        let img = card.querySelector('img');
+        if (img) {
+            img.src = thumbnail
+        }
+    }
 })
 
 // Get icon theme directory
@@ -5377,12 +5720,14 @@ ipcRenderer.on('folder_size', (e, source, folder_size) => {
     } else {
         if (source !== 'File System' || source !== 'Recent') {
             let card = tab_content.querySelector(`[data-properties_href="${source}"]`);
-            let size = card.querySelector('.size')
-            if (size) {
-                size.innerHTML = ''
-                size.innerHTML = getFileSize(folder_size);
+            if (card) {
+                let size = card.querySelector('.size')
+                if (size) {
+                    size.innerHTML = ''
+                    size.innerHTML = getFileSize(folder_size);
+                }
+                card = null;
             }
-            card = null;
         }
     }
 
@@ -5515,22 +5860,22 @@ ipcRenderer.on('get_view', (e, href) => {
     })
 })
 
-// Get Workspace
-ipcRenderer.on('get_workspace', (e) => {
-    getWorkspace(workspace => { });
-})
+// // Get Workspace
+// ipcRenderer.on('get_workspace', (e) => {
+//     getWorkspace(workspace => { });
+// })
 
-// Remove Workspace
-ipcRenderer.on('remove_workspace', (e, href) => {
-    ipcRenderer.send('remove_workspace', (e, href));
-})
+// // Remove Workspace
+// ipcRenderer.on('remove_workspace', (e, href) => {
+//     ipcRenderer.send('remove_workspace', (e, href));
+// })
 
-// Rename Workspace
-ipcRenderer.on('edit_workspace', (e, href) => {
-    // Edit workspace
-    editWorkspace(href);
+// // Rename Workspace
+// ipcRenderer.on('edit_workspace', (e, href) => {
+//     // Edit workspace
+//     editWorkspace(href);
 
-})
+// })
 
 ipcRenderer.on('sort', (e, sort_by) => {
     let location = document.getElementById('location');
@@ -6658,41 +7003,6 @@ function add_item(text) {
     return item;
 }
 
-// function toggleHidden() {
-
-//     if (view === 'grid') {
-
-//         let hidden_folder_grid = document.getElementById('hidden_folder_grid')
-//         let hidden_file_grid = document.getElementById('hidden_file_grid')
-//         let show_hidden = document.querySelectorAll('.show_hidden')
-
-//         if (hidden_folder_grid.classList.contains('hidden')) {
-//             hidden_folder_grid.classList.remove('hidden')
-//             hidden_file_grid.classList.remove('hidden')
-
-//             show_hidden.forEach(item => {
-//                 item.classList.add('active')
-//             })
-
-//             localStorage.setItem('show_hidden', 1);
-
-//         } else {
-//             hidden_folder_grid.classList.add('hidden')
-//             hidden_file_grid.classList.add('hidden')
-//             show_hidden.forEach(item => {
-//                 item.classList.remove('active')
-//             })
-
-//             localStorage.setItem('show_hidden', 0);
-
-//         }
-
-//     } else if (view === 'list') {
-
-//     }
-
-// }
-
 // Clear Items
 function clear() {
 
@@ -7311,7 +7621,7 @@ function getRecentView(dirents) {
     if (view === 'grid') {
         iconManager.resizeIcons(localStorage.getItem('icon_size'));
     } else if (view === 'list') {
-        listManager.resizeIcons(localStorage.getItem('list_icon_size'));
+        iconManager.resizeIcons(localStorage.getItem('list_icon_size'));
     }
     viewManager.lazyload();
 
@@ -7319,196 +7629,197 @@ function getRecentView(dirents) {
 
 }
 
-// Get Workspace
-function getWorkspace(callback) {
+// // Get Workspace
+// function getWorkspace(callback) {
 
-    ipcRenderer.invoke('get_workspace').then(res => {
+//     ipcRenderer.invoke('get_workspace').then(res => {
 
-        // add toggle for workspace items
-        let workspace_accordion = add_div(['workspace_accordion']);
-        let workspace_accordion_container = add_div(['workspace_accordion_container']);
-        let workspace_accordion_toggle = add_link('#', '');
+//         // add toggle for workspace items
+//         let workspace_accordion = add_div(['workspace_accordion']);
+//         let workspace_accordion_container = add_div(['workspace_accordion_container']);
+//         let workspace_accordion_toggle = add_link('#', '');
 
-        workspace_accordion.append(workspace_accordion_toggle, 'Workspace');
-        workspace_accordion.append(workspace_accordion_container);
+//         workspace_accordion.append(workspace_accordion_toggle, 'Workspace');
+//         workspace_accordion.append(workspace_accordion_container);
 
-        let workspace_toggle_icon = add_icon('chevron-down');
-        workspace_toggle_icon.classList.add('workspace_toggle');
-        workspace_accordion_toggle.append(workspace_toggle_icon);
+//         let workspace_toggle_icon = add_icon('chevron-down');
+//         workspace_toggle_icon.classList.add('workspace_toggle');
+//         workspace_accordion_toggle.append(workspace_toggle_icon);
 
-        let workspace = document.getElementById('workspace');
-        if (!workspace) {
-            workspace = add_div(); //document.getElementById('workspace');
-            workspace.id = 'workspace'
-            workspace.classList.add('workspace')
-        }
-        workspace.innerHTML = ''
-        // workspace.append(add_header('Workspace'));
-        workspace.append(document.createElement('hr'))
+//         let workspace = document.getElementById('workspace');
+//         if (!workspace) {
+//             workspace = add_div(); //document.getElementById('workspace');
+//             workspace.id = 'workspace'
+//             workspace.classList.add('workspace')
+//         }
+//         workspace.innerHTML = ''
+//         // workspace.append(add_header('Workspace'));
+//         workspace.append(document.createElement('hr'))
 
-        if (res.length == 0) {
-            workspace.append('Drop a file or folder');
-        }
+//         if (res.length == 0) {
+//             workspace.append('Drop a file or folder');
+//         }
 
-        workspace.addEventListener('mouseout', (e) => {
-            workspace.classList.remove('active')
-        })
+//         workspace.addEventListener('mouseout', (e) => {
+//             workspace.classList.remove('active')
+//         })
 
-        workspace.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            workspace.classList.add('active')
-        })
+//         workspace.addEventListener('dragover', (e) => {
+//             e.preventDefault();
+//             e.stopPropagation();
+//             workspace.classList.add('active')
+//         })
 
-        workspace.addEventListener('dragleave', (e) => {
-            workspace.classList.remove('active')
-        })
+//         workspace.addEventListener('dragleave', (e) => {
+//             workspace.classList.remove('active')
+//         })
 
-        workspace.addEventListener('drop', (e) => {
-            getSelectedFiles()
-            ipcRenderer.send('add_workspace', selected_files_arr);
-            clear()
-        })
+//         workspace.addEventListener('drop', (e) => {
+//             getSelectedFiles()
+//             ipcRenderer.send('add_workspace', selected_files_arr);
+//             clear()
+//         })
 
-        workspace_accordion.addEventListener('click', (e) => {
+//         workspace_accordion.addEventListener('click', (e) => {
 
-            workspace_accordion_container.classList.toggle('hidden');
+//             workspace_accordion_container.classList.toggle('hidden');
+//             if (workspace_accordion_container.classList.contains('hidden')) {
+//                 workspace_toggle_icon.classList.add('bi-chevron-right');
+//                 workspace_toggle_icon.classList.remove('bi-chevron-down');
+//             } else {
+//                 workspace_toggle_icon.classList.remove('bi-chevron-right');
+//                 workspace_toggle_icon.classList.add('bi-chevron-down');
+//             }
 
-            if (workspace_accordion_container.classList.contains('hidden')) {
-                workspace_toggle_icon.classList.add('bi-chevron-right');
-                workspace_toggle_icon.classList.remove('bi-chevron-down');
-            } else {
-                workspace_toggle_icon.classList.remove('bi-chevron-right');
-                workspace_toggle_icon.classList.add('bi-chevron-down');
-            }
+//         })
 
-        })
+//         res.forEach(file => {
 
-        res.forEach(file => {
+//             let workspace_div = add_div(['flex', 'item', 'workspace_div'])
+//             let workspace_item = add_div(['workspace_item']);
+//             let workspace_item_input = document.createElement('input');
+//             let img = document.createElement('img')
 
-            let workspace_div = add_div(['flex', 'item', 'workspace_div'])
-            let workspace_item = add_div(['workspace_item']);
-            let workspace_item_input = document.createElement('input');
-            let img = document.createElement('img')
+//             img.classList.add('icon', 'icon16')
+//             let a = document.createElement('a');
+//             a.href = file.href;
+//             a.innerHTML = file.name;
+//             a.preventDefault = true;
+//             workspace_item_input.classList.add('input', 'hidden');
 
-            img.classList.add('icon', 'icon16')
-            let a = document.createElement('a');
-            a.href = file.href;
-            a.innerHTML = file.name;
-            a.preventDefault = true;
-            workspace_item_input.classList.add('input', 'hidden');
+//             workspace_div.dataset.href = file.href;
+//             workspace_item_input.value = file.name;
 
-            workspace_div.dataset.href = file.href;
-            workspace_item_input.value = file.name;
+//             if (file.content_type === 'inode/directory') {
 
-            if (file.content_type === 'inode/directory') {
+//                 utilities.getFolderIcon(file).then(folder_icon_path => {
+//                     img.src = folder_icon_path;
+//                     workspace_item.append(a);
+//                     workspace_div.append(img, workspace_item, workspace_item_input);
+//                 })
 
-                utilities.getFolderIcon(file).then(folder_icon_path => {
-                    img.src = folder_icon_path;
-                    workspace_item.append(a);
-                    workspace_div.append(img, workspace_item, workspace_item_input);
-                })
+//                 // img.src = folder_icon + 'folder.svg';
+//                 // workspace_item.append(a);
+//                 // workspace_div.append(img, workspace_item, workspace_item_input);
+//             } else {
+//                 ipcRenderer.invoke('get_icon', (file.href)).then(res => {
+//                     img.src = res;
+//                     workspace_item.append(a);
+//                     workspace_div.append(img, workspace_item, workspace_item_input);
+//                     // workspace_item.append(img, a);
+//                 })
+//             }
 
-                // img.src = folder_icon + 'folder.svg';
-                // workspace_item.append(a);
-                // workspace_div.append(img, workspace_item, workspace_item_input);
-            } else {
-                ipcRenderer.invoke('get_icon', (file.href)).then(res => {
-                    img.src = res;
-                    workspace_item.append(a);
-                    workspace_div.append(img, workspace_item, workspace_item_input);
-                    // workspace_item.append(img, a);
-                })
-            }
+//             workspace_div.addEventListener('mouseover', (e) => {
+//                 workspace_div.title = `${file.href} \n Rename (F2)`;
+//                 a.focus();
+//             })
 
-            workspace_div.addEventListener('mouseover', (e) => {
-                workspace_div.title = `${file.href} \n Rename (F2)`;
-                a.focus();
-            })
+//             // Show Workspace Context Menu
+//             workspace_div.addEventListener('contextmenu', (e) => {
+//                 e.preventDefault();
+//                 ipcRenderer.send('workspace_menu', file);
+//                 workspace_div.classList.add('highlight');
+//             });
 
-            // Show Workspace Context Menu
-            workspace_div.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                ipcRenderer.send('workspace_menu', file);
-                workspace_div.classList.add('highlight');
-            });
+//             // Open Workspace Item
+//             workspace_div.addEventListener('click', (e) => {
 
-            // Open Workspace Item
-            workspace_div.addEventListener('click', (e) => {
+//                 e.preventDefault();
+//                 e.stopPropagation();
 
-                e.preventDefault();
-                e.stopPropagation();
+//                 utilities.clearActiveTabContent();
 
-                if (file.is_dir) {
-                    if (e.ctrlKey) {
-                        // tabManager.addTabHistory();
-                        viewManager.getView(file.href, 1);
-                    } else {
-                        // tabManager.addTabHistory();
-                        viewManager.getView(file.href);
-                    }
-                } else {
-                    ipcRenderer.send('open', file.href);
-                }
+//                 if (file.is_dir) {
+//                     if (e.ctrlKey) {
+//                         // tabManager.addTabHistory();
+//                         viewManager.getView(file.href, 1);
+//                     } else {
+//                         // tabManager.addTabHistory();
+//                         viewManager.getView(file.href);
+//                     }
+//                 } else {
+//                     ipcRenderer.send('open', file.href);
+//                 }
 
-                tabManager.addTabHistory(file.href);
+//                 tabManager.addTabHistory(file.href);
 
 
-            })
+//             })
 
-            // Edit workspace item
-            workspace_div.addEventListener('keyup', (e) => {
+//             // Edit workspace item
+//             workspace_div.addEventListener('keyup', (e) => {
 
-                e.preventDefault();
-                e.stopPropagation();
+//                 e.preventDefault();
+//                 e.stopPropagation();
 
-                if (e.key === 'F2') {
-                    workspace_item_input.classList.remove('hidden');
-                    workspace_item.classList.add('hidden');
-                    workspace_item_input.focus();
-                    workspace_item_input.select();
-                }
-                if (e.key === 'Escape') {
-                    workspace_item_input.classList.add('hidden');
-                    workspace_item.classList.remove('hidden');
-                }
+//                 if (e.key === 'F2') {
+//                     workspace_item_input.classList.remove('hidden');
+//                     workspace_item.classList.add('hidden');
+//                     workspace_item_input.focus();
+//                     workspace_item_input.select();
+//                 }
+//                 if (e.key === 'Escape') {
+//                     workspace_item_input.classList.add('hidden');
+//                     workspace_item.classList.remove('hidden');
+//                 }
 
-            })
+//             })
 
-            workspace_item_input.addEventListener('click', (e) => {
-                e.stopPropagation();
-            })
+//             workspace_item_input.addEventListener('click', (e) => {
+//                 e.stopPropagation();
+//             })
 
-            workspace_item_input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    ipcRenderer.send('rename_workspace', file.href, e.target.value)
-                }
-            })
+//             workspace_item_input.addEventListener('keydown', (e) => {
+//                 if (e.key === 'Enter') {
+//                     ipcRenderer.send('rename_workspace', file.href, e.target.value)
+//                 }
+//             })
 
-            // workspace_item.append(img, a);
-            workspace_accordion_container.append(workspace_div);
-            workspace.append(workspace_accordion);
+//             // workspace_item.append(img, a);
+//             workspace_accordion_container.append(workspace_div);
+//             workspace.append(workspace_accordion);
 
-        })
-        return callback(workspace);
+//         })
+//         return callback(workspace);
 
-    })
-}
+//     })
+// }
 
-function editWorkspace (href) {
+// function editWorkspace (href) {
 
-    let workspace = document.getElementById('workspace');
-    let workspace_div = workspace.querySelector(`[data-href="${href}"]`);
-    let workspace_item = workspace_div.querySelector('.workspace_item');
-    let workspace_item_input = workspace_div.querySelector('.input');
+//     let workspace = document.getElementById('workspace');
+//     let workspace_div = workspace.querySelector(`[data-href="${href}"]`);
+//     let workspace_item = workspace_div.querySelector('.workspace_item');
+//     let workspace_item_input = workspace_div.querySelector('.input');
 
-    // Edit workspace item
-    workspace_item_input.classList.remove('hidden');
-    workspace_item.classList.add('hidden');
-    workspace_item_input.focus();
-    workspace_item_input.select();
+//     // Edit workspace item
+//     workspace_item_input.classList.remove('hidden');
+//     workspace_item.classList.add('hidden');
+//     workspace_item_input.focus();
+//     workspace_item_input.select();
 
-}
+// }
 
 // Main Functions ////////////////////////////////////////////////////////////////
 
@@ -7794,7 +8105,6 @@ window.addEventListener('DOMContentLoaded', (e) => {
         show_hidden.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                // localStorage.setItem('show_hidden', view);
                 viewManager.toggleHidden()
             })
         })

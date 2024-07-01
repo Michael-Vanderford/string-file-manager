@@ -1,6 +1,6 @@
 const { parentPort, workerData, isMainThread } = require('worker_threads');
 const path = require('path');
-const gio_utils = require('../utils/gio');
+// const gio_utils = require('../utils/gio');
 // const gio = require('node-gio');
 const gio = require('../gio/build/Release/obj.target/gio')
 // const gio = require('/home/michael/source/repos/node-gio/build/Release/obj.target/gio');
@@ -19,22 +19,34 @@ parentPort.on('message', data => {
         //     thumb.postMessage({ cmd: 'create_thumbnail', source: href, destination: thumb_dir, sort: sort });
         // }
 
+
         try {
+
+            // get start time
+            let start = Date.now();
+
             gio.ls(data.source, (err, dirents) => {
+
                 if (err) {
                     parentPort.postMessage({cmd: 'msg', err: err});
                     return;
                 }
-                let file = gio.get_file(data.source);
+
                 let cmd = {
                     cmd: 'ls_done',
                     dirents: dirents,
                     source: data.source,
-                    display_name: file.display_name, // for tab name
+                    display_name: path.basename(data.source), //file.display_name, // for tab name
                     tab: data.tab
                 }
                 parentPort.postMessage(cmd);
             })
+
+            // // get end time
+            // let end = Date.now();
+            // let elapsed = end - start;
+            // console.log('ls elapsed', elapsed);
+
         } catch (err) {
 
             let msg = {

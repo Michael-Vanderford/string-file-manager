@@ -13,6 +13,7 @@
 #include <array>
 #include <sstream>
 #include <mutex>
+#include <chrono>
 
 // Node includes
 #include <nan.h>
@@ -28,7 +29,7 @@
 #include <chrono>
 
 // fuse
-#include <fuse.h>
+// #include <fuse.h>
 
 using namespace std;
 
@@ -45,140 +46,159 @@ namespace gio {
 
         public:
 
-        static NAN_METHOD(ls) {
+        // static NAN_METHOD(ls) {
 
-            Nan::HandleScope scope;
+        //     Nan::HandleScope scope;
 
-            if (info.Length() < 2 || !info[1]->IsFunction()) {
-                return Nan::ThrowError("Wrong arguments. Expected callback function.");
-            }
+        //     // start time
+        //     auto start = std::chrono::high_resolution_clock::now();
 
-            Nan::Callback callback(info[1].As<v8::Function>());
+        //     if (info.Length() < 2 || !info[1]->IsFunction()) {
+        //         return Nan::ThrowError("Wrong arguments. Expected callback function.");
+        //     }
 
-            v8::Local<v8::String> sourceString = Nan::To<v8::String>(info[0]).ToLocalChecked();
-            v8::Isolate* isolate = info.GetIsolate();
+        //     Nan::Callback callback(info[1].As<v8::Function>());
 
-            // Get the current context from the execution context
-            v8::Local<v8::Context> context = isolate->GetCurrentContext();
-            v8::String::Utf8Value sourceFile(context->GetIsolate(), sourceString);
-            v8::Local<v8::Array> resultArray = Nan::New<v8::Array>();
+        //     v8::Local<v8::String> sourceString = Nan::To<v8::String>(info[0]).ToLocalChecked();
+        //     v8::Isolate* isolate = info.GetIsolate();
 
-            // if (!g_file_test(*sourceFile, G_FILE_TEST_IS_DIR)) {
-            //     return Nan::ThrowError("Error: Directory does not exist.");
-            // }
+        //     // Get the current context from the execution context
+        //     v8::Local<v8::Context> context = isolate->GetCurrentContext();
+        //     v8::String::Utf8Value sourceFile(context->GetIsolate(), sourceString);
+        //     v8::Local<v8::Array> resultArray = Nan::New<v8::Array>();
 
-            GFile* src = g_file_new_for_path(*sourceFile);
+        //     GFile* src = g_file_new_for_path(*sourceFile);
 
-            const char *src_scheme = g_uri_parse_scheme(*sourceFile);
-            if (src_scheme != NULL) {
-                src = g_file_new_for_uri(*sourceFile);
-            }
+        //     const char *src_scheme = g_uri_parse_scheme(*sourceFile);
+        //     if (src_scheme != NULL) {
+        //         src = g_file_new_for_uri(*sourceFile);
+        //     }
 
-            GError* error = NULL;
-            guint index = 0;
-            GFileEnumerator* enumerator = g_file_enumerate_children(src,
-                                                                    "*",
-                                                                    G_FILE_QUERY_INFO_NONE,
-                                                                    NULL,
-                                                                    &error);
+        //     GError* error = NULL;
+        //     guint index = 0;
+        //     GFileEnumerator* enumerator = g_file_enumerate_children(src,
+        //                                                             "*",
+        //                                                             G_FILE_QUERY_INFO_NONE,
+        //                                                             NULL,
+        //                                                             &error);
 
-            if (enumerator == NULL) {
-                // Error handling
-                if (error != NULL) {
-                    return Nan::ThrowError(error->message);
-                } else {
-                    return Nan::ThrowError("Unknown error occurred");
-                }
+        //     auto t1 = std::chrono::high_resolution_clock::now();
+        //     auto t1_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - start);
+        //     printf("Elapsed time 1: %ld milliseconds\n", t1_elapsed.count());
 
-                // Clean up resources
-                g_object_unref(src);
-                return; // Return an error code
-            }
+        //     if (enumerator == NULL) {
+        //         // Error handling
+        //         if (error != NULL) {
+        //             return Nan::ThrowError(error->message);
+        //         } else {
+        //             return Nan::ThrowError("Unknown error occurred");
+        //         }
 
-            if (error != NULL) {
-                g_error_free(error);
-                g_object_unref(src);
-                return Nan::ThrowError(error->message);
-            }
+        //         // Clean up resources
+        //         g_object_unref(src);
+        //         return; // Return an error code
+        //     }
 
-            GFileInfo* file_info = NULL;
-            while ((file_info = g_file_enumerator_next_file(enumerator, NULL, &error)) != NULL) {
+        //     if (error != NULL) {
+        //         g_error_free(error);
+        //         g_object_unref(src);
+        //         return Nan::ThrowError(error->message);
+        //     }
 
-                const char* filename = g_file_info_get_name(file_info);
-                const char* display_name = g_file_info_get_display_name(file_info);
-                GFile* file = g_file_get_child(src, filename);
-                const char* href = g_file_get_path(file);
-                GFile* parent = g_file_get_parent(file);
-                const char* location = g_file_get_path(parent);
-                gboolean is_hidden = g_file_info_get_is_hidden(file_info);
-                gboolean is_directory = g_file_info_get_file_type(file_info) == G_FILE_TYPE_DIRECTORY;
-                const char* mimetype = g_file_info_get_content_type(file_info);
-                gboolean is_symlink = g_file_info_get_is_symlink(file_info);
-                gboolean  is_writeable = g_file_info_get_attribute_boolean(file_info, G_FILE_ATTRIBUTE_ACCESS_CAN_WRITE);
-                gboolean is_readable = g_file_info_get_attribute_boolean(file_info, G_FILE_ATTRIBUTE_ACCESS_CAN_READ);
+        //     auto t2 = std::chrono::high_resolution_clock::now();
+        //     auto t2_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+        //     printf("Elapsed time 2: %ld milliseconds\n", t2_elapsed.count());
 
-                v8::Local<v8::Object> fileObj = Nan::New<v8::Object>();
-                Nan::Set(fileObj, Nan::New("name").ToLocalChecked(), Nan::New(filename).ToLocalChecked());
-                Nan::Set(fileObj, Nan::New("display_name").ToLocalChecked(), Nan::New(display_name).ToLocalChecked());
-                Nan::Set(fileObj, Nan::New("href").ToLocalChecked(), Nan::New(href).ToLocalChecked());
-                Nan::Set(fileObj, Nan::New("location").ToLocalChecked(), Nan::New(location).ToLocalChecked());
-                Nan::Set(fileObj, Nan::New("is_dir").ToLocalChecked(), Nan::New<v8::Boolean>(is_directory));
-                Nan::Set(fileObj, Nan::New("is_hidden").ToLocalChecked(), Nan::New<v8::Boolean>(is_hidden));
-                Nan::Set(fileObj, Nan::New("is_readable").ToLocalChecked(), Nan::New<v8::Boolean>(is_readable));
-                Nan::Set(fileObj, Nan::New("is_writable").ToLocalChecked(), Nan::New<v8::Boolean>(is_writeable));
-                Nan::Set(fileObj, Nan::New("is_symlink").ToLocalChecked(), Nan::New<v8::Boolean>(is_symlink));
+        //     GFileInfo* file_info = NULL;
+        //     while ((file_info = g_file_enumerator_next_file(enumerator, NULL, &error)) != NULL) {
 
-                if (mimetype != nullptr) {
-                    Nan::Set(fileObj, Nan::New("content_type").ToLocalChecked(), Nan::New(mimetype).ToLocalChecked());
-                }
+        //         const char* filename = g_file_info_get_name(file_info);
+        //         const char* display_name = g_file_info_get_display_name(file_info);
+        //         GFile* file = g_file_get_child(src, filename);
+        //         const char* href = g_file_get_path(file);
+        //         GFile* parent = g_file_get_parent(file);
+        //         const char* location = g_file_get_path(parent);
+        //         gboolean is_hidden = g_file_info_get_is_hidden(file_info);
+        //         gboolean is_directory = g_file_info_get_file_type(file_info) == G_FILE_TYPE_DIRECTORY;
+        //         const char* mimetype = g_file_info_get_content_type(file_info);
+        //         gboolean is_symlink = g_file_info_get_is_symlink(file_info);
+        //         gboolean  is_writeable = g_file_info_get_attribute_boolean(file_info, G_FILE_ATTRIBUTE_ACCESS_CAN_WRITE);
+        //         gboolean is_readable = g_file_info_get_attribute_boolean(file_info, G_FILE_ATTRIBUTE_ACCESS_CAN_READ);
+        //         // const char* fs_type = g_file_info_get_attribute_string(file_info, G_FILE_ATTRIBUTE_FILESYSTEM_TYPE);
+        //         // std::string filesystem = fs_type ? fs_type : "unknown";
 
-                gint64 size = g_file_info_get_size(file_info);
-                Nan::Set(fileObj, Nan::New("size").ToLocalChecked(), Nan::New<v8::Number>(size));
+        //         v8::Local<v8::Object> fileObj = Nan::New<v8::Object>();
+        //         Nan::Set(fileObj, Nan::New("name").ToLocalChecked(), Nan::New(filename).ToLocalChecked());
+        //         Nan::Set(fileObj, Nan::New("display_name").ToLocalChecked(), Nan::New(display_name).ToLocalChecked());
+        //         Nan::Set(fileObj, Nan::New("href").ToLocalChecked(), Nan::New(href).ToLocalChecked());
+        //         Nan::Set(fileObj, Nan::New("location").ToLocalChecked(), Nan::New(location).ToLocalChecked());
+        //         Nan::Set(fileObj, Nan::New("is_dir").ToLocalChecked(), Nan::New<v8::Boolean>(is_directory));
+        //         Nan::Set(fileObj, Nan::New("is_hidden").ToLocalChecked(), Nan::New<v8::Boolean>(is_hidden));
+        //         Nan::Set(fileObj, Nan::New("is_readable").ToLocalChecked(), Nan::New<v8::Boolean>(is_readable));
+        //         Nan::Set(fileObj, Nan::New("is_writable").ToLocalChecked(), Nan::New<v8::Boolean>(is_writeable));
+        //         Nan::Set(fileObj, Nan::New("is_symlink").ToLocalChecked(), Nan::New<v8::Boolean>(is_symlink));
+        //         // Nan::Set(fileObj, Nan::New("filesystem").ToLocalChecked(), Nan::New(filesystem).ToLocalChecked());
 
-                // GTimeVal mtime_val;
-                GDateTime* mtime_dt = g_file_info_get_modification_date_time(file_info);
-                if (mtime_dt != NULL) {
-                    gint64 mtime = g_date_time_to_unix(mtime_dt);
-                    Nan::Set(fileObj, Nan::New("mtime").ToLocalChecked(), Nan::New<v8::Number>(mtime));
-                    g_date_time_unref(mtime_dt);
-                }
+        //         if (mimetype != nullptr) {
+        //             Nan::Set(fileObj, Nan::New("content_type").ToLocalChecked(), Nan::New(mimetype).ToLocalChecked());
+        //         }
 
-                // Get the access time (atime)
-                GDateTime* atime_dt = g_file_info_get_access_date_time(file_info);
-                if (atime_dt != NULL) {
-                    gint64 atime = g_date_time_to_unix(atime_dt);
-                    Nan::Set(fileObj, Nan::New("atime").ToLocalChecked(), Nan::New<v8::Number>(atime));
-                    g_date_time_unref(atime_dt);
-                }
+        //         gint64 size = g_file_info_get_size(file_info);
+        //         Nan::Set(fileObj, Nan::New("size").ToLocalChecked(), Nan::New<v8::Number>(size));
 
-                // // Get the change time (ctime)
-                GDateTime* ctime_dt = g_file_info_get_creation_date_time(file_info);
-                if (ctime_dt != NULL) {
-                    gint64 ctime = g_date_time_to_unix(ctime_dt);
-                    Nan::Set(fileObj, Nan::New("ctime").ToLocalChecked(), Nan::New<v8::Number>(ctime));
-                    g_date_time_unref(ctime_dt);
-                }
+        //         // GTimeVal mtime_val;
+        //         GDateTime* mtime_dt = g_file_info_get_modification_date_time(file_info);
+        //         if (mtime_dt != NULL) {
+        //             gint64 mtime = g_date_time_to_unix(mtime_dt);
+        //             Nan::Set(fileObj, Nan::New("mtime").ToLocalChecked(), Nan::New<v8::Number>(mtime));
+        //             g_date_time_unref(mtime_dt);
+        //         }
 
-                Nan::Set(resultArray, index++, fileObj);
+        //         // Get the access time (atime)
+        //         GDateTime* atime_dt = g_file_info_get_access_date_time(file_info);
+        //         if (atime_dt != NULL) {
+        //             gint64 atime = g_date_time_to_unix(atime_dt);
+        //             Nan::Set(fileObj, Nan::New("atime").ToLocalChecked(), Nan::New<v8::Number>(atime));
+        //             g_date_time_unref(atime_dt);
+        //         }
 
-                g_object_unref(file);
-                g_object_unref(parent);
-                g_object_unref(file_info);
+        //         // // Get the change time (ctime)
+        //         GDateTime* ctime_dt = g_file_info_get_creation_date_time(file_info);
+        //         if (ctime_dt != NULL) {
+        //             gint64 ctime = g_date_time_to_unix(ctime_dt);
+        //             Nan::Set(fileObj, Nan::New("ctime").ToLocalChecked(), Nan::New<v8::Number>(ctime));
+        //             g_date_time_unref(ctime_dt);
+        //         }
 
-            }
+        //         Nan::Set(resultArray, index++, fileObj);
 
-            if (error != NULL) {
-                g_error_free(error);
-                return Nan::ThrowError(error->message);
-            }
+        //         g_object_unref(file);
+        //         g_object_unref(parent);
+        //         g_object_unref(file_info);
 
-            g_object_unref(enumerator);
-            g_object_unref(src);
+        //     }
 
-            v8::Local<v8::Value> argv[] = { Nan::Null(), resultArray };
-            callback.Call(2, argv);
+        //     if (error != NULL) {
+        //         g_error_free(error);
+        //         return Nan::ThrowError(error->message);
+        //     }
 
-        }
+        //     auto t3 = std::chrono::high_resolution_clock::now();
+        //     auto t3_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2);
+        //     printf("Elapsed time 3: %ld milliseconds\n", t3_elapsed.count());
+
+        //     g_object_unref(enumerator);
+        //     g_object_unref(src);
+
+        //     // end time
+        //     auto end = std::chrono::high_resolution_clock::now();
+        //     std::chrono::duration<double> elapsed = end - start;
+        //     printf("total elapsed time: %f seconds\n", elapsed.count());
+
+        //     v8::Local<v8::Value> argv[] = { Nan::Null(), resultArray };
+        //     callback.Call(2, argv);
+
+        // }
 
         static NAN_METHOD(get_file) {
 
@@ -656,25 +676,49 @@ namespace gio {
 
             bytes_copied = current_num_bytes - bytes_copied0;
             bytes_copied0 = current_num_bytes;
-
             v8::Local<v8::Object> dataObj = Nan::New<v8::Object>();
             Nan::Set(dataObj, Nan::New("current_num_bytes").ToLocalChecked(), Nan::New<v8::Number>(current_num_bytes));
             Nan::Set(dataObj, Nan::New("bytes_copied").ToLocalChecked(), Nan::New<v8::Number>(bytes_copied));
             Nan::Set(dataObj, Nan::New("total_bytes").ToLocalChecked(), Nan::New<v8::Number>(total_bytes));
 
             Nan::Callback* callback = static_cast<Nan::Callback*>(user_data);
-            const unsigned argc = 1;
-            v8::Local<v8::Value> argv[argc] = { dataObj };
+            const unsigned argc = 2;
+            v8::Local<v8::Value> argv[argc] = { Nan::Null(), dataObj };
             callback->Call(argc, argv);
-
         }
+
+        // static void
+        // progress_callback(goffset current_num_bytes,
+        //                 goffset total_bytes,
+        //                 gpointer user_data) {
+
+        //     Nan::HandleScope scope;
+        //     if (user_data == NULL) {
+        //         printf("User data is NULL\n");
+        //         return;
+        //     }
+
+        //     static goffset bytes_copied0 = 0;
+        //     goffset bytes_copied = current_num_bytes - bytes_copied0;
+        //     bytes_copied0 = current_num_bytes;
+
+        //     v8::Local<v8::Object> dataObj = Nan::New<v8::Object>();
+        //     Nan::Set(dataObj, Nan::New("current_num_bytes").ToLocalChecked(), Nan::New<v8::Number>(current_num_bytes));
+        //     Nan::Set(dataObj, Nan::New("bytes_copied").ToLocalChecked(), Nan::New<v8::Number>(bytes_copied));
+        //     Nan::Set(dataObj, Nan::New("total_bytes").ToLocalChecked(), Nan::New<v8::Number>(total_bytes));
+
+        //     Nan::Callback* callback = static_cast<Nan::Callback*>(user_data);
+        //     const unsigned argc = 2;
+        //     v8::Local<v8::Value> argv[argc] = { Nan::Null(), dataObj };
+        //     callback->Call(argc, argv);
+        // }
 
         static thread_local Nan::Persistent<v8::Object> persistentHandle;
 
         static
         NAN_METHOD(cp_async) {
 
-            Nan:: HandleScope scope;
+            Nan::HandleScope scope;
 
             if (info.Length() < 3) {
                 return Nan::ThrowError("Wrong number of arguments");
@@ -682,7 +726,7 @@ namespace gio {
 
             v8::Local<v8::String> sourceString = Nan::To<v8::String>(info[0]).ToLocalChecked();
             v8::Local<v8::String> destString = Nan::To<v8::String>(info[1]).ToLocalChecked();
-
+            Nan::Callback* callback = new Nan::Callback(info[2].As<v8::Function>());
 
             v8::Isolate* isolate = info.GetIsolate();
             v8::String::Utf8Value sourceFile(isolate, sourceString);
@@ -706,14 +750,30 @@ namespace gio {
             Nan::Set(obj, Nan::New("cancellable").ToLocalChecked(), Nan::New<v8::External>(cancellable));
             persistentHandle.Reset(obj);
 
-            GError** error = nullptr;
-            g_file_copy(src,
+            GError* error = nullptr;
+            gboolean result = g_file_copy(src,
                         dest,
                         G_FILE_COPY_ALL_METADATA,
                         cancellable,
                         (GFileProgressCallback) gio::progress_callback,
-                        new Nan::Callback(info[info.Length() - 1].As<v8::Function>()),
-                        error);
+                        callback,
+                        // new Nan::Callback(info[info.Length() - 1].As<v8::Function>()),
+                        &error);
+
+            if (!result) {
+                v8::Local<v8::Value> argv[] = {
+                    Nan::New(error->message).ToLocalChecked()
+                };
+                callback->Call(1, argv);
+                g_error_free(error);
+            } else {
+                v8::Local<v8::Value> argv[] = {
+                    Nan::Null(),
+                    Nan::New("Copy completed successfully").ToLocalChecked()
+                };
+                callback->Call(2, argv);
+            }
+
 
             bytes_copied0 = 0;
             bytes_copied = 0;
@@ -910,6 +970,160 @@ namespace gio {
     thread_local Nan::Persistent<v8::Object> gio::persistentHandle;
     thread_local goffset gio::bytes_copied = 0;
     thread_local goffset gio::bytes_copied0 = 0;
+
+    NAN_METHOD(ls) {
+
+        Nan::HandleScope scope;
+
+        // start time
+        // auto start = std::chrono::high_resolution_clock::now();
+
+        if (info.Length() < 2 || !info[1]->IsFunction()) {
+            return Nan::ThrowError("Wrong arguments. Expected callback function.");
+        }
+
+        Nan::Callback callback(info[1].As<v8::Function>());
+
+        v8::Local<v8::String> sourceString = Nan::To<v8::String>(info[0]).ToLocalChecked();
+        v8::Isolate* isolate = info.GetIsolate();
+
+        // Get the current context from the execution context
+        v8::Local<v8::Context> context = isolate->GetCurrentContext();
+        v8::String::Utf8Value sourceFile(context->GetIsolate(), sourceString);
+        v8::Local<v8::Array> resultArray = Nan::New<v8::Array>();
+
+        GFile* src = g_file_new_for_path(*sourceFile);
+
+        const char *src_scheme = g_uri_parse_scheme(*sourceFile);
+        if (src_scheme != NULL) {
+            src = g_file_new_for_uri(*sourceFile);
+        }
+
+        GError* error = NULL;
+        guint index = 0;
+        GFileEnumerator* enumerator = g_file_enumerate_children(src,
+                                                                "*",
+                                                                G_FILE_QUERY_INFO_NONE,
+                                                                NULL,
+                                                                &error);
+
+        // auto t1 = std::chrono::high_resolution_clock::now();
+        // auto t1_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - start);
+        // printf("Elapsed time 1: %ld milliseconds\n", t1_elapsed.count());
+
+        if (enumerator == NULL) {
+            // Error handling
+            if (error != NULL) {
+                return Nan::ThrowError(error->message);
+            } else {
+                return Nan::ThrowError("Unknown error occurred");
+            }
+
+            // Clean up resources
+            g_object_unref(src);
+            return; // Return an error code
+        }
+
+        if (error != NULL) {
+            g_error_free(error);
+            g_object_unref(src);
+            return Nan::ThrowError(error->message);
+        }
+
+        // auto t2 = std::chrono::high_resolution_clock::now();
+        // auto t2_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+        // printf("Elapsed time 2: %ld milliseconds\n", t2_elapsed.count());
+
+        GFileInfo* file_info = NULL;
+        while ((file_info = g_file_enumerator_next_file(enumerator, NULL, &error)) != NULL) {
+
+            const char* filename = g_file_info_get_name(file_info);
+            const char* display_name = g_file_info_get_display_name(file_info);
+            GFile* file = g_file_get_child(src, filename);
+            const char* href = g_file_get_path(file);
+            GFile* parent = g_file_get_parent(file);
+            const char* location = g_file_get_path(parent);
+            gboolean is_hidden = g_file_info_get_is_hidden(file_info);
+            gboolean is_directory = g_file_info_get_file_type(file_info) == G_FILE_TYPE_DIRECTORY;
+            const char* mimetype = g_file_info_get_content_type(file_info);
+            gboolean is_symlink = g_file_info_get_is_symlink(file_info);
+            gboolean  is_writeable = g_file_info_get_attribute_boolean(file_info, G_FILE_ATTRIBUTE_ACCESS_CAN_WRITE);
+            gboolean is_readable = g_file_info_get_attribute_boolean(file_info, G_FILE_ATTRIBUTE_ACCESS_CAN_READ);
+            const char* fs_type = g_file_info_get_attribute_string(file_info, G_FILE_ATTRIBUTE_FILESYSTEM_TYPE);
+            std::string filesystem = fs_type ? fs_type : "unknown";
+
+            v8::Local<v8::Object> fileObj = Nan::New<v8::Object>();
+            Nan::Set(fileObj, Nan::New("name").ToLocalChecked(), Nan::New(filename).ToLocalChecked());
+            Nan::Set(fileObj, Nan::New("display_name").ToLocalChecked(), Nan::New(display_name).ToLocalChecked());
+            Nan::Set(fileObj, Nan::New("href").ToLocalChecked(), Nan::New(href).ToLocalChecked());
+            Nan::Set(fileObj, Nan::New("location").ToLocalChecked(), Nan::New(location).ToLocalChecked());
+            Nan::Set(fileObj, Nan::New("is_dir").ToLocalChecked(), Nan::New<v8::Boolean>(is_directory));
+            Nan::Set(fileObj, Nan::New("is_hidden").ToLocalChecked(), Nan::New<v8::Boolean>(is_hidden));
+            Nan::Set(fileObj, Nan::New("is_readable").ToLocalChecked(), Nan::New<v8::Boolean>(is_readable));
+            Nan::Set(fileObj, Nan::New("is_writable").ToLocalChecked(), Nan::New<v8::Boolean>(is_writeable));
+            Nan::Set(fileObj, Nan::New("is_symlink").ToLocalChecked(), Nan::New<v8::Boolean>(is_symlink));
+            Nan::Set(fileObj, Nan::New("filesystem").ToLocalChecked(), Nan::New(filesystem).ToLocalChecked());
+
+            if (mimetype != nullptr) {
+                Nan::Set(fileObj, Nan::New("content_type").ToLocalChecked(), Nan::New(mimetype).ToLocalChecked());
+            }
+
+            gint64 size = g_file_info_get_size(file_info);
+            Nan::Set(fileObj, Nan::New("size").ToLocalChecked(), Nan::New<v8::Number>(size));
+
+            // GTimeVal mtime_val;
+            GDateTime* mtime_dt = g_file_info_get_modification_date_time(file_info);
+            if (mtime_dt != NULL) {
+                gint64 mtime = g_date_time_to_unix(mtime_dt);
+                Nan::Set(fileObj, Nan::New("mtime").ToLocalChecked(), Nan::New<v8::Number>(mtime));
+                g_date_time_unref(mtime_dt);
+            }
+
+            // Get the access time (atime)
+            GDateTime* atime_dt = g_file_info_get_access_date_time(file_info);
+            if (atime_dt != NULL) {
+                gint64 atime = g_date_time_to_unix(atime_dt);
+                Nan::Set(fileObj, Nan::New("atime").ToLocalChecked(), Nan::New<v8::Number>(atime));
+                g_date_time_unref(atime_dt);
+            }
+
+            // // Get the change time (ctime)
+            GDateTime* ctime_dt = g_file_info_get_creation_date_time(file_info);
+            if (ctime_dt != NULL) {
+                gint64 ctime = g_date_time_to_unix(ctime_dt);
+                Nan::Set(fileObj, Nan::New("ctime").ToLocalChecked(), Nan::New<v8::Number>(ctime));
+                g_date_time_unref(ctime_dt);
+            }
+
+            Nan::Set(resultArray, index++, fileObj);
+
+            g_object_unref(file);
+            g_object_unref(parent);
+            g_object_unref(file_info);
+
+        }
+
+        if (error != NULL) {
+            g_error_free(error);
+            return Nan::ThrowError(error->message);
+        }
+
+        // auto t3 = std::chrono::high_resolution_clock::now();
+        // auto t3_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2);
+        // printf("Elapsed time 3: %ld milliseconds\n", t3_elapsed.count());
+
+        g_object_unref(enumerator);
+        g_object_unref(src);
+
+        // end time
+        // auto end = std::chrono::high_resolution_clock::now();
+        // std::chrono::duration<double> elapsed = end - start;
+        // printf("total elapsed time: %f seconds\n", elapsed.count());
+
+        v8::Local<v8::Value> argv[] = { Nan::Null(), resultArray };
+        callback.Call(2, argv);
+
+    }
 
     NAN_METHOD(get_drives) {
 
@@ -1978,83 +2192,59 @@ namespace gio {
     // void connect_network_drive_callback(GObject *source_object, GAsyncResult *res, gpointer user_data) {
 
     //     Nan::HandleScope scope;
-
     //     GError *error = nullptr;
     //     GFile *location = G_FILE(source_object);
     //     gboolean mounted = g_file_mount_enclosing_volume_finish(location,
     //                                                             res,
     //                                                             &error);
-
     //     Nan::Callback* callback = static_cast<Nan::Callback*>(user_data);
-
     //     if (error) {
-
     //         printf("Error mounting network drive: %s\n", error->message);
     //         g_error_free(error);
-
     //     } else {
-
     //         const unsigned argc = 2;
     //         v8::Local<v8::Object> dataObj = Nan::New<v8::Object>();
     //         Nan::Set(dataObj, Nan::New("name").ToLocalChecked(), Nan::New("connected").ToLocalChecked());
     //         v8::Local<v8::Value> argv[argc] = { Nan::Null(), dataObj };
     //         callback->Call(argc, argv);
-
     //     }
-
     //     g_object_unref(location);
-
     // }
 
     // NAN_METHOD(connect_network_drive) {
-
     //     Nan::HandleScope scope;
-
     //     if (info.Length() < 5) {
     //         printf("Wrong number of arguments\n");
     //         // return Nan::ThrowError("Wrong number of arguments");
     //     }
-
     //     v8::Local<v8::String> v8_hostname = Nan::To<v8::String>(info[0]).ToLocalChecked();
     //     v8::Local<v8::String> v8_username = Nan::To<v8::String>(info[1]).ToLocalChecked();
     //     v8::Local<v8::String> v8_password = Nan::To<v8::String>(info[2]).ToLocalChecked();
     //     v8::Local<v8::Int32> v8_ssh_key = Nan::To<v8::Int32>(info[3]).ToLocalChecked();
     //     v8::Local<v8::String> v8_type = Nan::To<v8::String>(info[4]).ToLocalChecked();
-
     //     v8::Isolate* isolate = info.GetIsolate();
     //     v8::String::Utf8Value utf8_hostname(isolate, v8_hostname);
     //     v8::String::Utf8Value utf8_username(isolate, v8_username);
     //     v8::String::Utf8Value utf8_password(isolate, v8_password);
     //     v8::String::Utf8Value utf8_type(isolate, v8_type);
-
     //     const char *hostname = *utf8_hostname;
     //     const char *username = *utf8_username;
     //     const char *password = *utf8_password;
     //     int ssh_key = Nan::To<int>(v8_ssh_key).FromJust();
     //     const char *cmd_type = *utf8_type;
-
     //     printf("type: %s, ssh_key: %d \n", cmd_type, ssh_key);
-
     //     GError *error = NULL;
     //     GFile *location = NULL;
     //     GAsyncResult *result = NULL;
-
     //     // Set up SSH key authentication
     //     GMountOperation *mount_operation = g_mount_operation_new();
-
     //     int is_ssh = strncmp(cmd_type, "ssh", 3);
     //     // int is_sshfs = strncmp(hostname, "sshfs", 5);
-
     //     // Prioritize SSH key if provided
     //     if (is_ssh == 0 && ssh_key) {
-
     //         printf("Using SSH key\n");
-
     //         // construct location uri
     //         char *uri = g_strdup_printf("sftp://%s@%s/", username, hostname);
-
-
-
     //         location = g_file_new_for_uri(uri);
     //         g_file_mount_enclosing_volume(location,
     //                                     G_MOUNT_MOUNT_NONE,
@@ -2062,37 +2252,26 @@ namespace gio {
     //                                     NULL,
     //                                     GAsyncReadyCallback(connect_network_drive_callback),
     //                                     new Nan::Callback(info[info.Length() - 1].As<v8::Function>()));
-
     //     // } else if (is_sftp == 0 && !ssh_key) {
-
     //     //     printf("Using username and password\n");
-
     //     //     location = g_file_new_for_uri(hostname);
     //     //     g_mount_operation_set_username(mount_operation, username);
     //     //     g_mount_operation_set_password(mount_operation, password);
-
     //     //     g_file_mount_enclosing_volume(location,
     //     //                                 G_MOUNT_MOUNT_NONE,
     //     //                                 mount_operation,
     //     //                                 NULL,
     //     //                                 GAsyncReadyCallback(connect_network_drive_callback),
     //     //                                 new Nan::Callback(info[info.Length() - 1].As<v8::Function>()));
-
-
     //     // } else {
-
     //     //     // Use username and password authentication
     //     //     char *uri = g_strdup_printf("smb://%s:%s@%s/", username, password, hostname);
     //     //     location = g_file_new_for_uri(uri);
     //     //     g_free(uri);
-
     //     }
-
     //     // g_object_unref(location);
     //     g_object_unref(mount_operation);
-
     //     // info.GetReturnValue().SetUndefined();
-
     // }
 
     NAN_MODULE_INIT(init) {
@@ -2107,7 +2286,7 @@ namespace gio {
         Nan::Export(target, "count", count);
         Nan::Export(target, "exists", exists);
         Nan::Export(target, "get_file", gio::get_file);
-        Nan::Export(target, "ls", gio::ls);
+        Nan::Export(target, "ls", ls);
         Nan::Export(target, "mkdir", gio::mkdir);
         Nan::Export(target, "cp", cp);
         Nan::Export(target, "cp_stream", cp_stream);

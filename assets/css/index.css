@@ -171,7 +171,7 @@ body {
 .list_view_table.post {
     /* border: 1px solid red; */
     opacity: 1;
-    transition: opacity 2.5s ease-in-out;
+    /* transition: opacity 2.5s ease-in-out; */
 }
 
 .list_view_table {
@@ -464,10 +464,16 @@ th {
     line-height: 26px;
 }
 
+.nav_menu .filter:focus {
+        outline: none;
+        border: 1px solid var(--input-focus) !important;
+    }
+
 .nav_menu .filter.empty::before {
     content: attr(data-placeholder);
     color: gray;
     pointer-events: none;
+    position: absolute;
 }
 
 .nav_menu .back:hover {

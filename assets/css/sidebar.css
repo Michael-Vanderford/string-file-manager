@@ -47,8 +47,11 @@
     height: 90%;
 }
 
-.sb_view .item.active {
-    /* background: var(--highlight) */
+.sb_view .item.sidebar_active {
+    border-radius: 5px;
+    background: var(--highlight-select);
+    /* box-shadow: 0 0 3px var(--border); */
+    user-select: none;
 }
 
 .sb_home {

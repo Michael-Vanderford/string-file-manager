@@ -21,7 +21,7 @@ const mt = require('mousetrap');
 
 // Workers
 const worker = new Worker(path.join(__dirname, 'workers/worker.js'));
-const ls = new Worker(path.join(__dirname, 'workers/ls.js'));
+const ls_worker = new Worker(path.join(__dirname, 'workers/ls.js'));
 const thumb = new Worker(path.join(__dirname, 'workers/thumbnailer.js'));
 const find = new Worker(path.join(__dirname, 'workers/find.js'));
 const copy = new Worker(path.join(__dirname, 'workers/copy.js'));
@@ -75,7 +75,7 @@ class FileManager {
                             }
                         } catch (err) {
                             // win.send('msg', 'watcher error: ' + err.message);
-                            // console.log('watcher error', err)
+                            console.log('watcher error', err)
                         }
                     }
 
@@ -91,14 +91,16 @@ class FileManager {
 
         // Call create thumbnails
         try {
+
             let thumb_dir = path.join(app.getPath('userData'), 'thumbnails');
             if (href.indexOf('mtp') > -1 || href.indexOf('thumbnails') > -1) {
                 thumb.postMessage({ cmd: 'create_thumbnail', source: href, destination: thumb_dir, sort: sort });
             } else {
                 thumb.postMessage({ cmd: 'create_thumbnail', source: href, destination: thumb_dir, sort: sort });
             }
+
             // Call ls worker to get file data
-            ls.postMessage({ cmd: 'ls', source: href, tab: tab});
+            ls_worker.postMessage({ cmd: 'ls', source: href, tab: tab});
 
         } catch (err) {
             win.send('msg', err);
@@ -518,7 +520,7 @@ find.on('message', (data) => {
     }
 })
 
-ls.on('message', (data) => {
+ls_worker.on('message', (data) => {
 
     switch (data.cmd) {
         case 'msg': {
@@ -1889,22 +1891,27 @@ ipcMain.on('clip', (e, href) => {
 
 // Get Devices
 ipcMain.on('get_devices', (e) => {
-
     worker.postMessage({ cmd: 'get_devices'});
-    setTimeout(() => {
-
-        // Monitor USB Devices
-        gio.monitor(data => {
-            if (data) {
-                if (data != 'mtp') {
-                    worker.postMessage({ cmd: 'get_devices'});
-                }
-            }
-        });
-
-    }, 5000);
-
+    // setTimeout(() => {
+        // // Monitor USB Devices
+        // gio.monitor(data => {
+        //     if (data) {
+        //         if (data != 'mtp') {
+        //             worker.postMessage({ cmd: 'get_devices'});
+        //         }
+        //     }
+        // });
+    // }, 5000);
 })
+
+// Monitor USB Devices
+gio.monitor(data => {
+    if (data) {
+        if (data != 'mtp') {
+            worker.postMessage({ cmd: 'get_devices'});
+        }
+    }
+});
 
 // ipcMain.handle('get_devices', async (e) => {
 
@@ -2133,7 +2140,7 @@ ipcMain.on('paste', (e, destination) => {
                     progress_id += 1;
                     let data = {
                         id: progress_id,
-                        cmd: 'paste',
+                        cmd: 'paste_recursive',
                         copy_arr: copy_arr
                     }
                     paste_worker.postMessage(data);
@@ -3196,7 +3203,7 @@ ipcMain.on('folder_menu', (e, file) => {
         {
             label: 'New Tab',
             click: () => {
-                ls.postMessage({ cmd: 'ls', source: file.href, tab: 1 });
+                ls_worker.postMessage({ cmd: 'ls', source: file.href, tab: 1 });
             }
         },
         {
@@ -3568,7 +3575,7 @@ ipcMain.on('merge_folder_menu', (e, href) => {
         {
             label: 'New Tab',
             click: () => {
-                ls.postMessage({ cmd: 'ls', source: file.href, tab: 1 });
+                ls_worker.postMessage({ cmd: 'ls', source: file.href, tab: 1 });
             }
         },
         {
@@ -4010,7 +4017,7 @@ ipcMain.on('sidebar_menu', (e, href) => {
         {
             label: 'Open In New Tab',
             click: () => {
-                ls.postMessage({ cmd: 'ls', source: href, tab: 1 });
+                ls_worker.postMessage({ cmd: 'ls', source: href, tab: 1 });
             }
         },
         // {

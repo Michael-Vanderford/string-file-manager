@@ -307,6 +307,12 @@ function get_files_arr(source, destination, callback) {
         for (let i = 0; i < dirents.length; i++) {
 
             let file = dirents[i]
+
+            if (file.filesystem.toLocaleLowerCase() === 'ntfs') {
+                // sanitize file name
+                file.name = file.name.replace(/[^a-z0-9]/gi, '_');
+            }
+
             if (!file.is_symlink) {
                 if (file.is_dir) {
                     get_files_arr(file.href, path.format({ dir: destination, base: file.name }), callback)
@@ -980,10 +986,153 @@ parentPort.on('message', data => {
 
         }
 
+        case 'paste_recursive': {
+
+            let idx = 0;
+            let bytes_copied0 = 0;
+            let bytes_copied = 0;
+            let max = 0;
+            let copy_arr = [];
+            let data_arr = data.copy_arr;
+            let progress_id = Math.floor(Math.random() * 100);
+
+            console.log(progress_id);
+
+            function get_next() {
+
+                if (idx === data_arr.length) {
+                    return;
+                }
+
+                let copy_item = data_arr[idx];
+                idx++
+                
+                let is_dir = copy_item.is_dir;
+                if (is_dir) {
+                    get_files_arr(copy_item.source, copy_item.destination, (err, dirents) => {
+
+                        if (err) {
+                            console.log(err);
+                            return;
+                        }
+                        let cpc = 0;
+
+                        for (let i = 0; i < dirents.length; i++) {
+
+                            // short cut
+                            let f = dirents[i];
+
+                            // sanitize file name
+                            f.destination = f.destination.replaceAll(':', '_');
+
+                            // calculate max
+                            if (f.size) {
+                                max += f.size;
+                            }
+
+                            if (f.type == 'directory') {
+                                cpc++
+                                copy_arr.push({ source: f.source, destination: f.destination, is_dir: 1})
+                            } else {
+                                cpc++
+                                copy_arr.push({ source: f.source, destination: f.destination, is_dir: 0})
+                            }
+
+                        }
+
+                        if (cpc === dirents.length) {
+                            get_next();
+                        }
+
+                    })
+                } else {
+
+                    // sanitize file name
+                    copy_item.destination = copy_item.destination.replaceAll(':', '_');
+
+                    // add to copy array
+                    copy_arr.push({ source: copy_item.source, destination: copy_item.destination, is_dir: 0})
+                    get_next();
+                }
+
+            }
+
+            get_next();
+
+            // sort so we create all the directories first
+            copy_arr.sort((a, b) => {
+                return a.source.length - b.source.length;
+            })
+
+            for (let i = 0; i < copy_arr.length; i++) {
+
+                let f = copy_arr[i];
+                try {
+
+                    if (f.is_dir) {
+                        gio.mkdir(f.destination)
+                    } else {
+
+                        gio.cp_async(f.source, f.destination, (err, res) => {
+
+                            if (err) {
+                                console.log('error', err, f.source, f.destination);
+                                return;
+                            }
+
+                            // const current_time = Date.now();
+                            bytes_copied0 = bytes_copied;
+
+                            if (res.bytes_copied > 0) {
+                                bytes_copied += parseInt(res.bytes_copied);
+                            }
+
+                            // update progress
+                            let progress_data = {
+                                id: progress_id,
+                                cmd: 'progress',
+                                msg: `Copying `,  // ${path.basename(f.source)}`,
+                                max: max,
+                                value: bytes_copied
+                            }
+                            parentPort.postMessage(progress_data);
+
+                            // console.log('bytes_copied', bytes_copied, max);
+                            // File Copy done
+                            if (bytes_copied >= max && bytes_copied > 0) {
+
+                                let progress_done = {
+                                    id: progress_id,
+                                    cmd: 'progress',
+                                    msg: '',
+                                    max: 0,
+                                    value: 0
+                                }
+                                parentPort.postMessage(progress_done);
+                                bytes_copied = 0;
+
+                            }
+
+                        })
+
+                    }
+
+                } catch (err) {
+                    console.log(err);
+                    return;
+                }
+
+
+
+            }
+
+            break;
+        }
+
         // Past Files
         case 'paste': {
 
-            // console.log('running paste')
+            console.log('running paste')
             let idx = 0;
             let copy_arr = data.copy_arr
 
@@ -1028,7 +1177,12 @@ parentPort.on('message', data => {
                 if (is_writable) {
 
                     // gio_utils.get_file(copy_item.source, file => {
-                    let file = gio.get_file(copy_item.source);
+                    let file;
+                    try {
+                        file = gio.get_file(copy_item.source);
+                    } catch (err) {
+                        console.log(err);
+                    }
 
                     if (file.is_dir || file.type === 'directory') {
 
