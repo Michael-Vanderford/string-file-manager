@@ -785,7 +785,7 @@ class Utilities {
                 location.value = file.href;
                 if (e.ctrlKey) {
                     // ipcRenderer.send('get_files', file.href, 1);
-                    this.getFiles(file.href, 1);
+                    fileOperations.getFiles(file.href, 1);
                 } else {
                     location.dispatchEvent(new Event('change'));
                 }
@@ -808,9 +808,9 @@ class Utilities {
                 location.value = file.href;
                 if (e.ctrlKey) {
                     // ipcRenderer.send('get_files', file.href, 1);
-                    this.getFiles(file.href, 1);
+                    fileOperations.getFiles(file.href, 1);
                 } else {
-                    location.dispatchEvent(new Event('change'));
+                    fileOperations.dispatchEvent(new Event('change'));
                 }
                 ipcRenderer.send('saveRecentFile', file.href);
             })
@@ -1812,9 +1812,6 @@ class Navigation {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // clear all active content
-                utilities.clearActiveTabContent();
-
                 // handle click
                 if (href === 'Recent') {
                     ipcRenderer.send('get_recent_files', this.location.value);
@@ -1823,6 +1820,7 @@ class Navigation {
                         if (e.ctrlKey) {
                             viewManager.getView(nav_path, 1);
                         } else {
+                            utilities.clearActiveTabContent();
                             viewManager.getView(nav_path);
                         }
                         tabManager.addTabHistory(nav_path);
@@ -3272,6 +3270,18 @@ class ViewManager {
         // get stored dirents
         let dirents = this.files_arr; //fileOperations.dirents;
 
+        // handle empty folder
+        let empty_msg = add_div(['empty_msg']);
+        if (dirents.length === 0) {
+            utilities.clearActiveTabContent();
+            empty_msg.textContent = 'Folder is empty';
+            active_tab_content.append(empty_msg);
+            utilities.msg('');
+            return;
+        } else {
+            empty_msg.classList.add('hidden');
+        }
+
         let folder_grid = active_tab_content.querySelector('.folder_grid');
         if (!folder_grid) {
             folder_grid = add_div(['folder_grid', 'grid']);
@@ -3792,6 +3802,18 @@ class ViewManager {
 
             let dirents = this.files_arr;
             let active_tab_content = document.querySelector('.active-tab-content');
+
+            // handle empty folder
+            let empty_msg = add_div(['empty_msg']);
+            if (dirents.length === 0) {
+                utilities.clearActiveTabContent();
+                empty_msg.textContent = 'Folder is empty';
+                active_tab_content.append(empty_msg);
+                utilities.msg('');
+                return;
+            } else {
+                empty_msg.classList.add('hidden');
+            }
 
             // column headers array
             const columnHeaders = Object.keys(settings.Captions).filter(
@@ -4894,7 +4916,7 @@ class WorkspaceManager {
 
         // Get Workspace
         ipcRenderer.on('get_workspace', (e) => {
-            getWorkspace(() => {});
+            this.getWorkspace(() => {});
         })
 
         // Remove Workspace
@@ -5032,16 +5054,14 @@ class WorkspaceManager {
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // clear active tab content
-                    utilities.clearActiveTabContent();
-
                     // handle click
                     if (file.is_dir) {
                         if (e.ctrlKey) {
                             // tabManager.addTabHistory();
                             viewManager.getView(file.href, 1);
                         } else {
-                            // tabManager.addTabHistory();
+                            // clear active tab content
+                            utilities.clearActiveTabContent();
                             viewManager.getView(file.href);
                         }
                     } else {
