@@ -40,7 +40,7 @@
     },
     "email": "michael.vanderford@gmail.com",
     "devDependencies": {
-        "electron": "^31.1.0",
+        "electron": "^26.2.2",
         "electron-builder": "^24.13.3"
     },
     "dependencies": {
