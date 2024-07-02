@@ -810,7 +810,7 @@ class Utilities {
                     // ipcRenderer.send('get_files', file.href, 1);
                     fileOperations.getFiles(file.href, 1);
                 } else {
-                    fileOperations.dispatchEvent(new Event('change'));
+                    location.dispatchEvent(new Event('change'));
                 }
                 ipcRenderer.send('saveRecentFile', file.href);
             })
@@ -1250,10 +1250,19 @@ class Utilities {
 
     // show empty folder message
     showEmptyFolderMsg() {
+
         let active_tab_content = document.querySelector('.active-tab-content');
-        active_tab_content.innerHTML = '';
+        let folder_icon = add_icon('folder');
+        let br = document.createElement('br');
         let empty_msg = add_div(['empty_msg']);
-        empty_msg.innerHTML = 'Folder is Empty';
+
+        folder_icon.style = 'font-size: 100px';
+
+        this.clearActiveTabContent();
+
+        active_tab_content.innerHTML = '';
+        empty_msg.append(folder_icon, br, 'Folder is Empty');
+
         active_tab_content.append(empty_msg);
         hide_loader();
     }
@@ -3271,15 +3280,11 @@ class ViewManager {
         let dirents = this.files_arr; //fileOperations.dirents;
 
         // handle empty folder
-        let empty_msg = add_div(['empty_msg']);
         if (dirents.length === 0) {
-            utilities.clearActiveTabContent();
-            empty_msg.textContent = 'Folder is empty';
-            active_tab_content.append(empty_msg);
-            utilities.msg('');
+            utilities.showEmptyFolderMsg();
             return;
         } else {
-            empty_msg.classList.add('hidden');
+            utilities.removeEmptyFolderMsg();
         }
 
         let folder_grid = active_tab_content.querySelector('.folder_grid');
@@ -3804,15 +3809,11 @@ class ViewManager {
             let active_tab_content = document.querySelector('.active-tab-content');
 
             // handle empty folder
-            let empty_msg = add_div(['empty_msg']);
             if (dirents.length === 0) {
-                utilities.clearActiveTabContent();
-                empty_msg.textContent = 'Folder is empty';
-                active_tab_content.append(empty_msg);
-                utilities.msg('');
+                utilities.showEmptyFolderMsg();
                 return;
             } else {
-                empty_msg.classList.add('hidden');
+                utilities.removeEmptyFolderMsg();
             }
 
             // column headers array

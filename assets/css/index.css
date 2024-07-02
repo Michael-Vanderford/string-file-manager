@@ -953,6 +953,8 @@ th {
 }
 
 .bi {
+    /* color: var(--text); */
+    /* opacity: 0.5; */
     /* filter: drop-shadow(3px 3px 2px rgb(0 0 0 / 0.9)); */
 }
 
@@ -1322,16 +1324,13 @@ input[type=text]:focus {
 }
 
 .empty_msg {
-    /* display: flex; */
-    /* justify-content: center; */
-    /* align-items: center; */
+    /* border: 1px solid var(--border); */
     position: fixed;
-    top: 50%;
+    top: 40%;
     left: 50%;
-    height: 80%;
-    width: 100%;
     font-size: 24px;
     font-weight: bold;
+    text-align: center;
 }
 
 .ds-selected {

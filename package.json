@@ -17,7 +17,9 @@
     "build": {
         "appId": "com.stringboardsoftware.stringfilemanager",
         "linux": {
-            "target": ["deb"],
+            "target": [
+                "deb"
+            ],
             "executableName": "sfm"
         }
     },
@@ -38,8 +40,8 @@
     },
     "email": "michael.vanderford@gmail.com",
     "devDependencies": {
-        "electron": "^26.2.2",
-        "electron-builder": "^24.6.4"
+        "electron": "^31.1.0",
+        "electron-builder": "^24.13.3"
     },
     "dependencies": {
         "bootstrap-icons": "^1.10.5",
