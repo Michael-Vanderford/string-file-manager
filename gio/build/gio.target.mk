@@ -162,7 +162,8 @@ LIBS := \
 	-lgio-2.0 \
 	-lgobject-2.0 \
 	-lglib-2.0 \
-	-lgdk_pixbuf-2.0
+	-lgdk_pixbuf-2.0 \
+	-larchive
 
 $(obj).target/gio.node: GYP_LDFLAGS := $(LDFLAGS_$(BUILDTYPE))
 $(obj).target/gio.node: LIBS := $(LIBS)

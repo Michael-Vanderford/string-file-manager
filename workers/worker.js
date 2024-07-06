@@ -996,8 +996,6 @@ parentPort.on('message', data => {
             let data_arr = data.copy_arr;
             let progress_id = Math.floor(Math.random() * 100);
 
-            console.log(progress_id);
-
             function get_next() {
 
                 if (idx === data_arr.length) {
@@ -1006,7 +1004,7 @@ parentPort.on('message', data => {
 
                 let copy_item = data_arr[idx];
                 idx++
-                
+
                 let is_dir = copy_item.is_dir;
                 if (is_dir) {
                     get_files_arr(copy_item.source, copy_item.destination, (err, dirents) => {
@@ -1046,6 +1044,10 @@ parentPort.on('message', data => {
 
                     })
                 } else {
+
+                    if (copy_item.size) {
+                        max += copy_item.size;
+                    }
 
                     // sanitize file name
                     copy_item.destination = copy_item.destination.replaceAll(':', '_');
@@ -1110,6 +1112,12 @@ parentPort.on('message', data => {
                                 }
                                 parentPort.postMessage(progress_done);
                                 bytes_copied = 0;
+
+                                let copy_done = {
+                                    cmd: 'copy_done',
+                                    destination: f.destination
+                                }
+                                parentPort.postMessage(copy_done);
 
                             }
 
@@ -1468,6 +1476,117 @@ parentPort.on('message', data => {
             break;
         }
 
+        // case 'compress': {
+
+        //     let location = data.location;
+        //     let type = data.type;
+        //     let size = data.size;
+        //     let selected_files_arr = data.files_arr;
+        //     let progress_id = data.id;
+
+        //     let c = 0;
+        //     let cmd = '';
+        //     let file_list = selected_files_arr.map(item => `'${path.basename(item)}'`).join(' ');
+
+        //     // Create command for compressed file
+        //     let destination = path.basename(selected_files_arr[0]);
+        //     selected_files_arr = [];
+
+        //     if (!fs.existsSync(location)) {
+        //         let msg = {
+        //             cmd: 'msg',
+        //             msg: `Error: Directory ${location} does not exist`
+        //         };
+        //         parentPort.postMessage(msg);
+        //         console.log(`Error: Directory ${location} does not exist`);
+        //         break;
+        //     }
+
+        //     // Adjust destination file name based on type
+        //     if (type === 'zip') {
+        //         destination = destination.substring(0, destination.length - path.extname(destination).length) + '.zip';
+        //     } else if (type === 'tar.gz') {
+        //         destination = destination.substring(0, destination.length - path.extname(destination).length) + '.tar.gz';
+        //     } else {
+        //         let msg = {
+        //             cmd: 'msg',
+        //             msg: `Error: Unsupported archive type ${type}`
+        //         };
+        //         parentPort.postMessage(msg);
+        //         console.log(`Error: Unsupported archive type ${type}`);
+        //         break;
+        //     }
+
+        //     let file_path = path.format({ dir: location, base: destination });
+
+        //     // Construct the file-roller command
+        //     cmd = `cd '${location}' && file-roller --add --force '${file_path}' ${file_list}`;
+
+        //     // const compressionRatio = 0.5;
+        //     // let setinterval_id = setInterval(() => {
+        //     //     let file = gio.get_file(file_path);
+        //     //     if (file) {
+        //     //         let progress_opts = {
+        //     //             id: progress_id,
+        //     //             cmd: 'progress',
+        //     //             value: file.size,
+        //     //             max: Math.round(parseInt(size) * compressionRatio),
+        //     //             msg: `Compressing "${path.basename(file_path)}"`
+        //     //         };
+        //     //         parentPort.postMessage(progress_opts);
+        //     //     }
+        //     // }, 1000);
+
+        //     let msg = {
+        //         cmd: 'msg',
+        //         msg: `Compressing "${path.basename(file_path)}"`,
+        //         has_timeout: 0
+        //     };
+        //     parentPort.postMessage(msg);
+
+        //     exec(cmd, { timeout: 5000 }, (err, stdout, stderr) => {
+        //         clearInterval(setinterval_id);
+
+        //         if (err) {
+        //             let msg = {
+        //                 cmd: 'msg',
+        //                 msg: `Error: ${err.message}`
+        //             };
+        //             parentPort.postMessage(msg);
+        //             console.log(`Error: ${err.message}`);
+        //         } else if (stderr) {
+        //             let userInputPatterns = ['[y/N]', 'overwrite', 'permission'];
+        //             if (userInputPatterns.some(pattern => stderr.includes(pattern))) {
+        //                 let msg = {
+        //                     cmd: 'msg',
+        //                     msg: 'Error: User input required during compression'
+        //                 };
+        //                 parentPort.postMessage(msg);
+        //                 console.log('Error: User input required during compression');
+        //             } else {
+        //                 let msg = {
+        //                     cmd: 'msg',
+        //                     msg: `Stderr: ${stderr}`
+        //                 };
+        //                 parentPort.postMessage(msg);
+        //                 console.log(`Stderr: ${stderr}`);
+        //             }
+        //         } else {
+        //             let compress_done = {
+        //                 cmd: 'compress_done',
+        //                 id: progress_id,
+        //                 file_path: file_path,
+        //             };
+        //             parentPort.postMessage(compress_done);
+        //             size = 0;
+        //             c = 0;
+        //         }
+        //         console.log(`Stdout: ${stdout}`);
+        //     });
+
+        //     break;
+        // }
+
         // Compress Files
         case 'compress': {
 
@@ -1479,46 +1598,99 @@ parentPort.on('message', data => {
 
             let c = 0;
             let cmd = '';
-            let file_list = [];
-            selected_files_arr.forEach((item, idx) => {
-                file_list += `'${path.basename(item)}' `;
-            })
+            let file_list = selected_files_arr.map(item => `'${path.basename(item)}'`).join(' ');
+
+            // let file_list = [];
+            // selected_files_arr.forEach((item, idx) => {
+            //     file_list += `'${path.basename(item)}' `;
+            // })
 
             // Create command for compressed file
             let destination = path.basename(selected_files_arr[0]);
             selected_files_arr = [];
 
+            let watcher;
+            let setinterval_id;
+
             if (type === 'zip') {
+
                 destination = destination.substring(0, destination.length - path.extname(destination).length) + '.zip';
-                cmd = `cd '${location}'; zip -r '${destination}' ${file_list}`;
-                // cmd = `cd '${location}' && tar -czf '${destination}' ${file_list}`;
+                cmd = `cd '${location}'; zip -r -q '${destination}' ${file_list}`;
+
+                // Watch for temporary files created by zip
+                let tmpFileNamePattern = /zi\w+/;
+                let tmpFilePath;
+                watcher = fs.watch(location, (eventType, filename) => {
+                    if (eventType === 'rename' && tmpFileNamePattern.test(filename)) {
+                        tmpFilePath = path.join(location, filename);
+                    }
+                });
+
+                setinterval_id = setInterval(() => {
+                    fs.stat(tmpFilePath, (err, stats) => {
+                        if (!err) {
+
+                            let progress_data = {
+                                id: progress_id,
+                                cmd: 'progress',
+                                msg: `Compressing "${path.basename(file_path)}"`,
+                                max: Math.round(parseInt(size)),
+                                value: stats.size
+                            }
+                            parentPort.postMessage(progress_data);
+
+                        }
+
+                    });
+
+                }, 1000);
+
             } else {
+
                 destination = destination.substring(0, destination.length - path.extname(destination).length) + '.tar.gz';
                 cmd = `cd '${location}'; tar czf '${destination}' ${file_list}`;
+
+                const compressionRatio = 0.5;
+                setinterval_id = setInterval(() => {
+                    let file = gio.get_file(file_path);
+                    if (file) {
+                        let progress_opts = {
+                            id: progress_id,
+                            cmd: 'progress',
+                            value: file.size,
+                            max: Math.round(parseInt(size) * compressionRatio),
+                            msg: `Compressing "${path.basename(file_path)}"`
+                        }
+                        parentPort.postMessage(progress_opts);
+
+                        if (file.size >= Math.round(parseInt(size) * compressionRatio)) {
+
+                            clearInterval(setinterval_id);
+
+                            let compress_done = {
+                                cmd: 'compress_done',
+                                id: progress_id,
+                                file_path: file_path,
+                            }
+                            parentPort.postMessage(compress_done);
+                            size = 0;
+                            c = 0;
+
+                        }
+
+                    } else {
+                        // let msg = {
+                        //     cmd: 'msg',
+                        //     msg: `Error: File ${file_path} not found`
+                        // }
+                        // parentPort.postMessage(msg);
+                    }
+
+                }, 1000);
+
             }
 
             let file_path = path.format({ dir: location, base: destination });
-
-            const compressionRatio = 0.5;
-            let setinterval_id = setInterval(() => {
-                let file = gio.get_file(file_path);
-                if (file) {
-                    let progress_opts = {
-                        id: progress_id,
-                        cmd: 'progress',
-                        value: file.size,
-                        max: Math.round(parseInt(size) * compressionRatio),
-                        msg: `Compressing "${path.basename(file_path)}"`
-                    }
-                    parentPort.postMessage(progress_opts);
-                } else {
-                    // let msg = {
-                    //     cmd: 'msg',
-                    //     msg: `Error: File ${file_path} not found`
-                    // }
-                    // parentPort.postMessage(msg);
-                }
-            }, 1000);
 
             let msg = {
                 cmd: 'msg',
@@ -1527,17 +1699,35 @@ parentPort.on('message', data => {
             }
             parentPort.postMessage(msg);
 
-            exec(cmd, (err, stdout) => {
-                if (err) {
-                    let msg = {
-                        cmd: 'msg',
-                        msg: err.message
-                    }
-                    parentPort.postMessage(msg);
-                    console.log(err);
-                }
+            // execute cmd
+            let process = exec(cmd);
+
+            // listen for data
+            process.stdout.on('data', (data) => {
+                console.log(data);
+            });
+
+            // listen for errors
+            process.stderr.on('data', (data) => {
 
                 clearInterval(setinterval_id);
+                watcher.close();
+
+                let msg = {
+                    cmd: 'msg',
+                    msg: data
+                }
+
+                parentPort.postMessage(msg);
+
+            })
+
+            // listen for process exit
+            process.on('close', (code) => {
+
+                clearInterval(setinterval_id);
+                watcher.close();
+
                 let compress_done = {
                     cmd: 'compress_done',
                     id: progress_id,
@@ -1547,8 +1737,43 @@ parentPort.on('message', data => {
                 size = 0;
                 c = 0;
 
-            })
-            selected_files_arr = [];
+            });
+
+
+            // let process = exec(cmd, {timeout: 2000 }, (err, stdout, stderr) => {
+
+            //     if (err) {
+            //         let msg = {
+            //             cmd: 'msg',
+            //             msg: err.message
+            //         }
+            //         parentPort.postMessage(msg);
+            //         console.log(err);
+            //     } else if (stderr) {
+            //         let msg = {
+            //             cmd: 'msg',
+            //             msg: stderr
+            //         }
+            //         parentPort.postMessage(msg);
+            //         console.log(stderr);
+            //     }
+
+            //     clearInterval(setinterval_id);
+            //     let compress_done = {
+            //         cmd: 'compress_done',
+            //         id: progress_id,
+            //         file_path: file_path,
+            //     }
+            //     parentPort.postMessage(compress_done);
+            //     size = 0;
+            //     c = 0;
+
+
+            // })
+
+            // process.on('data', (data) => {
+            //     console.log(data);
+            // })
 
             break;
         }
@@ -1796,7 +2021,8 @@ parentPort.on('message', data => {
                 // parentPort.postMessage(cmd);
 
             } catch (err) {
-                // console.log(err);
+                console.log(err);
+                return;
             }
 
             break;
@@ -1833,6 +2059,7 @@ parentPort.on('message', data => {
                                     }
                                     parentPort.postMessage(connection_cmd);
                                 }
+
                             } catch (err) {
                                 let connection_err = {
                                     cmd: 'connection_error',

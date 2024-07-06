@@ -404,17 +404,8 @@
     "v8_use_siphash": 1,
     "want_separate_host_toolset": 1,
     "nodedir": "/home/michael/.cache/node-gyp/26.2.2",
+    "python": "/usr/bin/python3",
     "standalone_static_library": 1,
-    "target": "26.2.2",
-    "userconfig": "/home/michael/.npmrc",
-    "cache": "/home/michael/.npm",
-    "local_prefix": "/home/michael/source/repos/string-file-manager",
-    "globalconfig": "/usr/local/etc/npmrc",
-    "init_module": "/home/michael/.npm-init.js",
-    "npm_version": "10.5.0",
-    "prefix": "/usr/local",
-    "user_agent": "npm/10.5.0 node/v20.12.2 linux x64 workspaces/false",
-    "node_gyp": "/usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
-    "global_prefix": "/usr/local"
+    "target": "26.2.2"
   }
 }

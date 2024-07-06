@@ -1325,12 +1325,14 @@ input[type=text]:focus {
 
 .empty_msg {
     /* border: 1px solid var(--border); */
+    color: var(--text);
     position: fixed;
     top: 40%;
     left: 50%;
     font-size: 24px;
     font-weight: bold;
     text-align: center;
+
 }
 
 .ds-selected {

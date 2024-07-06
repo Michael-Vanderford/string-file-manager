@@ -16,7 +16,8 @@
                 "-lgio-2.0",
                 "-lgobject-2.0",
                 "-lglib-2.0",
-                "-lgdk_pixbuf-2.0"
+                "-lgdk_pixbuf-2.0",
+                "-larchive",
             ],
             'cflags': [
                 '<!@(<(pkg-config) --libs --cflags glib-2.0)',

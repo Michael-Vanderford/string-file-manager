@@ -46,6 +46,7 @@
     "dependencies": {
         "bootstrap-icons": "^1.10.5",
         "chart.js": "^3.9.1",
-        "mousetrap": "^1.6.5"
+        "mousetrap": "^1.6.5",
+        "nan": "^2.20.0"
     }
 }

@@ -1,24 +1,11 @@
 const { parentPort, workerData, isMainThread } = require('worker_threads');
 const path = require('path');
-// const gio_utils = require('../utils/gio');
-// const gio = require('node-gio');
 const gio = require('../gio/build/Release/obj.target/gio')
-// const gio = require('/home/michael/source/repos/node-gio/build/Release/obj.target/gio');
-
 
 // Handle Worker Messages
 parentPort.on('message', data => {
     // List Files
     if (data.cmd === 'ls') {
-
-        // console.log('data', data)
-        // let thumb_dir = path.join(app.getPath('userData'), 'thumbnails');
-        // if (data.source.indexOf('mtp') > -1 || data.source.indexOf('thumbnails') > -1) {
-        //     thumb.postMessage({ cmd: 'create_thumbnail', source: data.source, destination: thumb_dir, sort: sort });
-        // } else {
-        //     thumb.postMessage({ cmd: 'create_thumbnail', source: href, destination: thumb_dir, sort: sort });
-        // }
-
 
         try {
 
@@ -31,7 +18,6 @@ parentPort.on('message', data => {
                     parentPort.postMessage({cmd: 'msg', err: err});
                     return;
                 }
-
                 let cmd = {
                     cmd: 'ls_done',
                     dirents: dirents,
@@ -40,12 +26,14 @@ parentPort.on('message', data => {
                     tab: data.tab
                 }
                 parentPort.postMessage(cmd);
+
+                // get end time
+                let end = Date.now();
+                let elapsed = (end - start) / 1000;
+                console.log('ls elapsed time', elapsed);
+                
             })
 
-            // // get end time
-            // let end = Date.now();
-            // let elapsed = end - start;
-            // console.log('ls elapsed', elapsed);
 
         } catch (err) {
 

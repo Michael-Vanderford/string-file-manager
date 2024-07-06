@@ -75,7 +75,7 @@ class FileManager {
                             }
                         } catch (err) {
                             // win.send('msg', 'watcher error: ' + err.message);
-                            console.log('watcher error', err)
+                            // console.log('watcher error', err)
                         }
                     }
 
@@ -413,11 +413,11 @@ class NetworkManager {
 
         this.network_settings_arr = []
 
-        ipcMain.on('set_network_settings', (e, network_settings) => {
-            this.setNetworkSettings(network_settings);
-        })
+        // ipcMain.on('set_network_settings', (e, network_settings) => {
+        //     this.setNetworkSettings(network_settings);
+        // })
 
-        this.connectNetwork();
+        // this.connectNetwork();
 
     }
 
@@ -2084,7 +2084,8 @@ ipcMain.on('paste', (e, destination) => {
             let copy_data = {
                 source: source, //selected_files_arr[i],
                 destination: destination, //path.format({dir: location, base: path.basename(selected_files_arr[i])}),  //path.join(location, path.basename(selected_files_arr[i]))
-                is_dir: file.is_dir
+                is_dir: file.is_dir,
+                size: file.size
             }
 
             if (overwrite == 0) {
