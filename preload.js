@@ -4358,16 +4358,11 @@ class ViewManager {
 
         if (view === 'grid') {
 
-            console.log('running toggle hidden grid view')
-
             let hidden_grids_arr = ['.hidden_folder_grid', '.hidden_file_grid'];
             hidden_grids_arr.forEach(grid => {
 
                 let active_tab_content = document.querySelector('.active-tab-content');
                 let hidden_grid = active_tab_content.querySelector(grid);
-
-                console.log('hidden grid', hidden_grid)
-
                 if (hidden_grid.classList.contains('hidden')) {
                     hidden_grid.classList.remove('hidden');
                     show_hidden = true;
@@ -4385,7 +4380,6 @@ class ViewManager {
 
             let trs = document.querySelectorAll('.tr');
             trs.forEach(tr => {
-                console.log('tr', tr.dataset.is_hidden)
                 if (tr.dataset.is_hidden === 'true') {
                     if (tr.classList.contains('hidden')) {
                         tr.classList.remove('hidden');

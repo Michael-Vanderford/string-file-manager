@@ -30,8 +30,8 @@ parentPort.on('message', data => {
                 // get end time
                 let end = Date.now();
                 let elapsed = (end - start) / 1000;
-                console.log('ls elapsed time', elapsed);
-                
+                // console.log('ls elapsed time', elapsed);
+
             })
 
 
