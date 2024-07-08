@@ -1679,11 +1679,11 @@ parentPort.on('message', data => {
                         }
 
                     } else {
-                        // let msg = {
-                        //     cmd: 'msg',
-                        //     msg: `Error: File ${file_path} not found`
-                        // }
-                        // parentPort.postMessage(msg);
+                        let msg = {
+                            cmd: 'msg',
+                            msg: `Error: File ${file_path} not found`
+                        }
+                        parentPort.postMessage(msg);
                     }
 
                 }, 1000);

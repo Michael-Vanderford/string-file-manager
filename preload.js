@@ -1289,7 +1289,10 @@ class Utilities {
                 let cards = grid.querySelectorAll('.card');
                 cards.forEach(card => {
                     let href = card.dataset.href;
-                    ipcRenderer.send('get_folder_size', href);
+                    let is_dir = card.dataset.is_dir;
+                    if (is_dir) {
+                        ipcRenderer.send('get_folder_size', href);
+                    }
                 })
             })
         })
@@ -1297,7 +1300,10 @@ class Utilities {
         let trs = document.querySelectorAll('.tr.folder');
         trs.forEach(tr => {
             let href = tr.dataset.href;
-            ipcRenderer.send('get_folder_size', href);
+            let is_dir = tr.dataset.is_dir;
+            if (is_dir) {
+                ipcRenderer.send('get_folder_size', href);
+            }
         })
 
     }
@@ -1366,15 +1372,6 @@ class Utilities {
                 return;
             }
 
-            // if (e.ctrlKey && (e.key === 'v'
-            //     || e.key === 'c'
-            //     || e.key === 'x'
-            //     || e.key === 'a'
-            //     || e.key === 'z'))
-            // {
-            //     return;
-            // }
-
             if (e.ctrlKey && e.key === 'l') {
                 this.location.focus();
                 return;
@@ -1430,6 +1427,12 @@ class Utilities {
                     }
                 })
 
+                // reset nav idx for up down navigation
+                navigation.clearNavIdx();
+
+                // set indexes for up down navigation
+                navigation.getCardGroups();
+
             }
 
         }, 100);
@@ -1448,6 +1451,13 @@ class Utilities {
             filter.innerText = '';
             filter.classList.add('empty');
         }
+
+        // reset nav idx for up down navigation
+        navigation.clearNavIdx();
+
+        // set indexes for up down navigation
+        navigation.getCardGroups();
+
     }
 
     // clear active tab content
@@ -2043,7 +2053,6 @@ class Navigation {
 
             switch (e.key) {
                 case 'ArrowDown': {
-
                     this.autocomplete_idx = (this.autocomplete_idx + 1) % this.suggestions.length;
                     for (let i = 0; i < this.suggestions.length; i++) {
                         if (i === this.autocomplete_idx) {
@@ -2129,6 +2138,11 @@ class Navigation {
             this.history_idx++;
             viewManager.getView(this.historyArr[this.history_idx]);
         }
+    }
+
+    // set nav idx back to null
+    clearNavIdx() {
+        this.nav_idx = null;
     }
 
     setIncrement() {
@@ -2920,7 +2934,7 @@ class ViewManager {
 
         this.idx = -1;
 
-        this.chunk_size = 100;
+        this.chunk_size = 50;
         this.chunk_idx = 0;
 
         this.initialX = 0;
@@ -3291,13 +3305,7 @@ class ViewManager {
         // get stored dirents
         let dirents = this.files_arr; //fileOperations.dirents;
 
-        // // handle empty folder
-        // if (dirents.length === 0) {
-        //     utilities.showEmptyFolderMsg();
-        //     return;
-        // } else {
-        //     utilities.removeEmptyFolderMsg();
-        // }
+        console.log('dirents', dirents)
 
         let folder_grid = active_tab_content.querySelector('.folder_grid');
         if (!folder_grid) {
@@ -3325,7 +3333,9 @@ class ViewManager {
         if (settings['Hidden Files']) {
             let show_hidden_icon = document.querySelector('.show_hidden')
             let show_hidden = settings['Hidden Files'].show;
+
             console.log('show hidden', show_hidden)
+
             if (show_hidden) {
                 hidden_folder_grid.classList.remove('hidden');
                 hidden_file_grid.classList.remove('hidden');
@@ -3426,6 +3436,7 @@ class ViewManager {
         tr.dataset.name = file.display_name;
         tr.dataset.type = file.content_type
         tr.dataset.size = file.size;
+        tr.dataset.is_hidden = file.is_hidden;
         tr.classList.add('tr', 'new_tr');
 
         link.draggable = false;
@@ -3673,12 +3684,11 @@ class ViewManager {
             return;
         }
 
-        let th = e.target;
-        let sort_div = th.querySelector('.sort_div');
-        let column = th.classList[0];
+        let active_tab_content = document.querySelector('.active-tab-content');
 
-        let sort_asc_icon = add_icon('bi-caret-up-fill');
-        let sort_desc_icon = add_icon('bi-caret-down-fill');
+        // get clicked column
+        let th = e.target;
+        let column = th.dataset.sort_by;
 
         // sort by column
         let sort_by = 'name';
@@ -3696,26 +3706,46 @@ class ViewManager {
             }
         }
 
+        // switch sort order
         sort_order = sort_order === 'asc' ? 'desc' : 'asc';
 
-        // handle sort direction icons
-        let sort_divs = document.querySelectorAll('.sort_div');
-        sort_divs.forEach(sort_div => {
+        let table = active_tab_content.querySelector('.list_view_table');
+        let ths = table.querySelectorAll('th');
+
+        // clear active tab ths
+        ths.forEach(th => {
+            let sort_div = th.querySelector('.sort_div');
             sort_div.innerHTML = '';
         })
 
-        if (sort_order === 'asc') {
-            sort_div.append(sort_asc_icon);
-        } else {
-            sort_div.append(sort_desc_icon);
-        }
+        // set sort icon on active column
+        ths.forEach(th => {
 
-        settings.Sort.by = sort_by; //column.toLocaleLowerCase();
+            if (th.dataset.sort_by === column) {
+
+                let sort_div = th.querySelector('.sort_div');
+
+                let sort_asc_icon = add_icon('bi-caret-up-fill');
+                let sort_desc_icon = add_icon('bi-caret-down-fill');
+
+                if (sort_order === 'asc') {
+                    sort_div.appendChild(sort_asc_icon);
+                } else {
+                    sort_div.appendChild(sort_desc_icon);
+                }
+
+            }
+
+        })
+
+        // save sort settings
+        settings.Sort.by = sort_by;
         settings.Sort.order = sort_order;
         ipcRenderer.send('save_settings', settings);
+
+        // call get list view
         this.getListView();
 
-        // let th = document.querySelector(`[data-sort_by="${sort_by}"]`);
 
     }
 
@@ -3812,7 +3842,7 @@ class ViewManager {
 
     chunk_load1 (chunk_size, idx) {
 
-        console.log('chunk load', chunk_size, idx)
+        // console.log('chunk load', chunk_size, idx)
 
         let active_tab_content = document.querySelector('.active-tab-content');
         let tbody = active_tab_content.querySelector('.table_body');
@@ -3822,9 +3852,11 @@ class ViewManager {
         for (let i = idx; i < end_idx; i++) {
             let file = this.files_arr[i];
             let tr = this.getTableRow(file)
-            if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
-                if (file.is_hidden) {
+            if (file.is_hidden) {
+                if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
                     tr.classList.add('hidden');
+                } else {
+                    tr.classList.remove('hidden');
                 }
             }
             tbody.appendChild(tr);
@@ -4010,7 +4042,7 @@ class ViewManager {
             let icon_size = iconManager.getIconSize();
             iconManager.resizeIcons(icon_size);
 
-            // utilities.getFolderSizes();
+            utilities.getFolderSizes();
             navigation.getCardGroups();
 
             this.lazyload();
@@ -4118,16 +4150,12 @@ class ViewManager {
         const files = dirents.filter(x => x.is_dir === false && x.is_hidden !== true);
         const hidden_files = dirents.filter(x => x.is_dir === false && x.is_hidden);
 
-        let show_hidden = '0';
-        if (settings['Hidden Files'] && settings['Hidden Files'].show) {
-            show_hidden = '1';
-        }
+        // let show_hidden = '0';
+        // if (settings['Hidden Files'] && settings['Hidden Files'].show) {
+        //     show_hidden = '1';
+        // }
 
-        if (show_hidden === '1') {
-            dirents_arr.push(directories, hidden_directories, files, hidden_files)
-        } else {
-            dirents_arr.push(directories, files)
-        }
+        dirents_arr.push(directories, hidden_directories, files, hidden_files)
 
         // check if sort settings exist
         if (!settings.Sort) {
@@ -4251,11 +4279,7 @@ class ViewManager {
 
         })
 
-        if (show_hidden === '1') {
-            return directories.concat(hidden_directories, files, hidden_files);
-        } else {
-            return directories.concat(files);
-        }
+        return directories.concat(hidden_directories, files, hidden_files);
 
     }
 
@@ -4330,59 +4354,51 @@ class ViewManager {
 
     toggleHidden() {
 
+        let show_hidden = false;
+
         if (view === 'grid') {
 
             console.log('running toggle hidden grid view')
 
-            let hidden_folder_grid = document.getElementById('hidden_folder_grid')
-            let hidden_file_grid = document.getElementById('hidden_file_grid')
-            let show_hidden = document.querySelectorAll('.show_hidden')
+            let hidden_grids_arr = ['.hidden_folder_grid', '.hidden_file_grid'];
+            hidden_grids_arr.forEach(grid => {
 
-            if (hidden_folder_grid.classList.contains('hidden')) {
-                hidden_folder_grid.classList.remove('hidden')
-                hidden_file_grid.classList.remove('hidden')
+                let active_tab_content = document.querySelector('.active-tab-content');
+                let hidden_grid = active_tab_content.querySelector(grid);
 
-                show_hidden.forEach(item => {
-                    item.classList.add('active')
-                })
+                console.log('hidden grid', hidden_grid)
 
-                settingsManager.getSettings(settings => {
-                    settings['Hidden Files'].show = true;
-                    ipcRenderer.send('save_settings', settings);
-                })
-
-            } else {
-
-                hidden_folder_grid.classList.add('hidden')
-                hidden_file_grid.classList.add('hidden')
-                show_hidden.forEach(item => {
-                    item.classList.remove('active')
-                })
-
-                settingsManager.getSettings(settings => {
-                    settings['Hidden Files'].show = false;
-                    ipcRenderer.send('save_settings', settings);
-                })
-            }
-
-            this.getGridView();
-
-        } else if (view === 'list') {
-
-            console.log('running toggle hidden grid view')
-
-            settingsManager.getSettings(settings => {
-                if (settings['Hidden Files'].show) {
-                    settings['Hidden Files'].show = false;
+                if (hidden_grid.classList.contains('hidden')) {
+                    hidden_grid.classList.remove('hidden');
+                    show_hidden = true;
                 } else {
-                    settings['Hidden Files'].show = true;
+                    hidden_grid.classList.add('hidden');
+                    show_hidden = false;
                 }
-                ipcRenderer.send('save_settings', settings)
-
-                this.getListView();
 
             })
 
+            settings['Hidden Files'].show = show_hidden;
+            ipcRenderer.send('save_settings', settings);
+
+        } else if (view === 'list') {
+
+            let trs = document.querySelectorAll('.tr');
+            trs.forEach(tr => {
+                console.log('tr', tr.dataset.is_hidden)
+                if (tr.dataset.is_hidden === 'true') {
+                    if (tr.classList.contains('hidden')) {
+                        tr.classList.remove('hidden');
+                        show_hidden = true;
+                    } else {
+                        tr.classList.add('hidden');
+                        show_hidden = false;
+                    }
+                }
+            })
+
+            settings['Hidden Files'].show = show_hidden;
+            ipcRenderer.send('save_settings', settings);
 
 
         }
@@ -4552,7 +4568,6 @@ class FileOperations {
 
             // Drag Select for cards
             utilities.dragSelect();
-            // utilities.getFolderSizes();
             viewManager.resize();
 
             // get number of cards in each div for keyboard navigation
