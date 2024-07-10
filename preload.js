@@ -81,16 +81,17 @@ class ProgressManager {
         this.progress = this.addDiv(['progress']);
         this.progressMsg = this.addDiv(['progress_msg']);
         this.progressBar = document.createElement('progress');
-        this.progressCancel = document.createElement('button');
-
+        this.progressCancel = add_icon('bi-x-circle');
         this.progress.id = `progress_${this.id}`;
         this.progressMsg.id = `progress_msg_${this.id}`;
         this.progressBar.id = `progress_bar_${this.id}`;
 
-        this.progress.append(this.progressMsg, this.progressBar);
+        console.log('progress_cancel', this.progressCancel)
+
+        this.progress.append(this.progressMsg, this.progressBar, this.progressCancel);
         this.container.append(this.progress);
 
-        this.progressCancel.textContent = 'Cancel';
+        this.progressCancel.title = 'Not implemented yet';
 
         // this.progress.style.display = 'block';
         // this.progress.style.position = 'absolute';
@@ -98,9 +99,11 @@ class ProgressManager {
 
         this.progressCancel.addEventListener('click', () => {
 
-            ipcRenderer.send('cp_cancel', '/home/michael/Downloads/pdf)');
-            this.progress.remove();
-            this.hideProgress();
+            ipcRenderer.send('cancel_operation');
+
+            // ipcRenderer.send('cp_cancel', '/home/michael/Downloads/pdf)');
+            // this.progress.remove();
+            // this.hideProgress();
 
         })
 
@@ -1137,9 +1140,9 @@ class Utilities {
         if (count === 0) {
             this.msg('');
         } else if (count === 1) {
-            this.msg(`${count} Item copied (${getFileSize(this.getSelectedSize())})`, 0);
+            this.msg(`${count} Item selected (${getFileSize(this.getSelectedSize())})`, 0);
         } else {
-            this.msg(`${count} Items copied (${getFileSize(this.getSelectedSize())})`, 0);
+            this.msg(`${count} Items selected (${getFileSize(this.getSelectedSize())})`, 0);
         }
     }
 
@@ -1157,6 +1160,7 @@ class Utilities {
                 icon_size = localStorage.getItem('icon_size');
             }
 
+            img.classList.add('icon');
             img.style.width = `${icon_size}px`;
 
             if (file.content_type.indexOf('image/') > -1) {
@@ -1516,7 +1520,7 @@ class IconManager {
         let icons = active_tab_content.querySelectorAll('.icon');
         icons.forEach(icon => {
             icon.style.width = `${icon_size}px`;
-            icon.style.height = `${icon_size}px`;
+            // icon.style.height = `${icon_size}px`;
         })
 
         if (view === 'grid') {
@@ -3151,6 +3155,9 @@ class ViewManager {
 
         // Remove Card
         ipcRenderer.on('remove_card', (e, href) => {
+
+            console.log('on removing card', href)
+
             this.source0 = href;
             let active_tab_content = document.querySelector('.active-tab-content');
             let cards = active_tab_content.querySelectorAll('.card, .tr, .tr1')
@@ -3158,11 +3165,16 @@ class ViewManager {
                 cards.forEach((card, idx) => {
                     if (card.dataset.href === href) {
                         this.idx = idx;
-                        console.log('removing card', idx)
+                        console.log('removing card 1', idx)
                         card.remove();
                         this.files_arr = this.files_arr.filter(file => file.href !== href);
                     }
                 })
+
+                cards = active_tab_content.querySelectorAll('.card, .tr, .tr1')
+                if (cards.length === 0) {
+                    utilities.showEmptyFolderMsg();
+                }
 
             } else {
                 utilities.showEmptyFolderMsg();
@@ -3390,6 +3402,8 @@ class ViewManager {
 
                 auto_complete_arr.push(file.href);
 
+                utilities.getFolderSize(file.href);
+
             } else {
 
                 if (file.is_hidden) {
@@ -3408,6 +3422,9 @@ class ViewManager {
 
         grid_view.append(folder_grid, hidden_folder_grid, file_grid, hidden_file_grid);
         active_tab_content.append(grid_view);
+
+        let icon_size = iconManager.getIconSize();
+        iconManager.resizeIcons(icon_size);
 
         utilities.getFolderSizes();
         this.lazyload();
@@ -4404,6 +4421,8 @@ class ViewManager {
 class FileOperations {
 
     constructor() {
+
+        this.location_div = document.querySelector('.location_div');
         this.location = document.querySelector('.location')
         this.cut_flag = 0;
         this.dirents = [];
@@ -4416,8 +4435,6 @@ class FileOperations {
 
             let st = new Date().getTime();
 
-            console.log('running new ls', data)
-
             // set dirents for views
             this.dirents = data.dirents;
             viewManager.files_arr = data.dirents;
@@ -4425,7 +4442,9 @@ class FileOperations {
             // let dirents = data.dirents;
             let source = data.source;
             let tab = data.tab;
+
             let display_name = data.display_name;
+            document.title = display_name;
 
             localStorage.setItem('location', source);
             auto_complete_arr = [];
@@ -4437,9 +4456,11 @@ class FileOperations {
 
             view = localStorage.getItem('view');
 
-            const selectionRectangle = document.getElementById('selection-rectangle');
-            let isSelecting = false;
-            let startPosX, startPosY, endPosX, endPosY;
+            // const selectionRectangle = document.getElementById('selection-rectangle');
+            // let isSelecting = false;
+            // let startPosX, startPosY, endPosX, endPosY;
+
+            let icon_size = "";
 
             // Set active on menu
             menu_items.forEach(item => {
@@ -4488,34 +4509,25 @@ class FileOperations {
             active_tab.title = source;
 
             active_tab.addEventListener('click', (e) => {
-                location.value = source;
+                this.location.value = source;
             })
 
-            // if (dirents.length === 0) {
-            //     utilities.showEmptyFolderMsg();
-            // } else {
-            //     utilities.removeEmptyFolderMsg();
-            // }
-
             active_label.innerHTML = display_name;
-
-            let location = document.querySelector('.location');
             let slider = document.querySelector('.slider');
 
-            location.value = source;
-            document.title = display_name;
+            // Set Location
+            // let location = document.querySelector('.location');
+            this.location.value = source;
 
-
+            // Load View
             if (view == 'list') {
-
-                viewManager.getListView()
+                viewManager.getListView();
 
             } else if (view === 'grid') {
-
-                viewManager.getGridView()
-
+                viewManager.getGridView();
             }
 
+            // Event listeners
             main.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -4544,15 +4556,7 @@ class FileOperations {
                 // document.removeEventListener('keyup', quickSearch)
             })
 
-            // Set Icon Size
-            let icon_size = "";
-            if (view === 'grid') {
-                icon_size = localStorage.getItem('icon_size')
-            } else if (view === 'list') {
-                icon_size = localStorage.getItem('list_icon_size')
-            }
-            iconManager.resizeIcons(icon_size);
-            slider.value = icon_size;
+
 
             // viewManager.lazyload();
             // sort_cards();
@@ -4571,15 +4575,14 @@ class FileOperations {
             // hide_loader();
             clear();
 
+            // clear filter
             utilities.clearFilter();
 
             // handle empty folder
             if (this.dirents.length === 0) {
                 utilities.showEmptyFolderMsg();
-                console.log('adding empty folder msg')
                 return;
             } else {
-                console.log('removing empty folder msg')
                 utilities.removeEmptyFolderMsg();
             }
 
@@ -4638,6 +4641,27 @@ class FileOperations {
 
         })
 
+    }
+
+    updateBreadcrumbs() {
+
+        console.log('running update breadcrumbs')
+
+        const path = this.location.value;
+        const pathParts = path.split('/').filter(part => part); // Split path by '/' and filter out empty parts
+        this.location_div.innerHTML = ''; // Clear previous breadcrumbs
+
+        pathParts.forEach((part, index) => {
+            const breadcrumb = document.createElement('span');
+            breadcrumb.textContent = part;
+            breadcrumb.className = 'breadcrumb';
+
+            if (index < pathParts.length - 1) {
+                breadcrumb.textContent += ' / '; // Add separator for all but the last breadcrumb
+            }
+
+            this.location_div.appendChild(breadcrumb);
+        });
     }
 
     // main call to get list of files in a directory

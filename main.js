@@ -1044,7 +1044,12 @@ function copyOverwrite(copy_overwrite_arr) {
 }
 
 // IPC ////////////////////////////////////////////////////
-/** */
+
+// cancel operation
+ipcMain.on('cancel_operation', (e) => {
+    console.log('cancel_operation')
+    worker.postMessage({ cmd: 'cancel_operation' });
+})
 
 // copy image to clipboard
 ipcMain.on('copy_to_clipboard', (e, href) => {
@@ -1432,6 +1437,8 @@ ipcMain.handle('basename', (e, source) => {
 
 ////////////////////////////////////////////////////
 /** */
+
+
 
 ipcMain.on('get_view', (e, location) => {
     win.send('get_view', location);
@@ -2723,7 +2730,7 @@ ipcMain.on('delete', (e, selected_files_delete_arr) => {
 })
 
 // Delete Confirmed
-ipcMain.on('delete_confirmed', (e, selected_files_arr1) => {
+ipcMain.on('delete_confirmed', (e) => {
 
     // Send array to worker
     let worker = new Worker(path.join(__dirname, 'workers/worker.js'));

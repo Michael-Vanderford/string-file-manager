@@ -294,6 +294,62 @@ let progress_id = 0;
 
 const cancel_get_files = false;
 
+// Helper function to promisify gio.ls
+function gio_ls(source) {
+    return new Promise((resolve, reject) => {
+        gio.ls(source, (err, dirents) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(dirents);
+            }
+        });
+    });
+}
+
+// get files array async
+async function get_files_arr_async(source, destination) {
+    cp_recursive++;
+    file_arr.push({ type: 'directory', source: source, destination: destination });
+
+    try {
+        const dirents = await gio_ls(source); // Assuming gio.ls is promisified
+
+        await Promise.all(dirents.map(async (file) => {
+            if (file.filesystem.toLowerCase() === 'ntfs') {
+                file.name = file.name.replace(/[^a-z0-9]/gi, '_');
+            }
+
+            if (!file.is_symlink) {
+                const filePath = path.format({ dir: destination, base: file.name });
+
+                if (file.is_dir) {
+                    await get_files_arr(file.href, filePath);
+                } else {
+                    file_arr.push({
+                        type: 'file',
+                        source: file.href,
+                        destination: filePath,
+                        size: file.size,
+                        is_symlink: file.is_symlink,
+                        file: file
+                    });
+                }
+            }
+        }));
+
+        cp_recursive--;
+
+        if (cp_recursive === 0 || cancel_get_files) {
+            const file_arr1 = file_arr;
+            file_arr = [];
+            return file_arr1;
+        }
+    } catch (err) {
+        throw err;
+    }
+}
+
 function get_files_arr(source, destination, callback) {
 
     cp_recursive++
@@ -361,8 +417,15 @@ let cancel_data = {
 // Handle Worker Messages
 parentPort.on('message', data => {
 
+    let isCancelled = false;
+
     // console.log('worker', data);
     switch (data.cmd) {
+
+        case 'cancel_operation': {
+            isCancelled = true;
+            break;
+        }
 
         case 'merge_files': {
 
@@ -679,7 +742,12 @@ parentPort.on('message', data => {
                         }
 
                     } else {
-                        gio.mv(f.source, f.destination, (progress_data) => {
+                        gio.mv(f.source, f.destination, (err, progress_data) => {
+
+                            if (err) {
+                                parentPort.postMessage({ cmd: 'msg', msg: err.message });
+                                return;
+                            }
 
                             bytes_copied += parseInt(progress_data.bytes_copied);
 
@@ -719,7 +787,7 @@ parentPort.on('message', data => {
                                 parentPort.postMessage(progress_done);
 
                                 bytes_copied = 0;
-                                parentPort.postMessage({ cmd: 'msg', msg: `Done Moving Files` });
+                                parentPort.postMessage({ cmd: 'msg', msg: `Done moving files` });
 
                             }
 
@@ -818,32 +886,27 @@ parentPort.on('message', data => {
         case 'delete_confirmed': {
 
             let idx = 0;
-            let del_arr = data.files_arr
+            let data_arr = data.files_arr
+            let del_arr = [];
 
-            // progress_id += 1;
+            progress_id += 1;
 
-            function delete_next() {
+            // show getting files message
+            let msg = {
+                cmd: 'msg',
+                msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" />   Getting files for delete operation...`,
+                has_timeout: 0
+            }
+            parentPort.postMessage(msg);
 
-                let msg = {
-                    cmd: 'msg',
-                    msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" /> Getting files for delete operation...`
-                }
-                parentPort.postMessage(msg);
+            // recursive function to get files array
+            function get_next() {
 
-                if (idx === del_arr.length) {
-
-                    let close_progress = {
-                        id: data.id,
-                        cmd: 'progress',
-                        msg: ``,
-                        max: 0,
-                        value: 0
-                    }
-                    parentPort.postMessage(close_progress);
+                if (idx === data_arr.length) {
                     return;
                 }
 
-                let del_item = del_arr[idx];
+                let del_item = data_arr[idx];
                 idx++
 
                 let is_dir = gio.is_dir(del_item);
@@ -851,136 +914,93 @@ parentPort.on('message', data => {
                     get_files_arr(del_item, del_item, (err, dirents) => {
 
                         if (err) {
-
-                            parentPort.postMessage({ cmd: 'msg', msg: err });
-
-                            let progress = {
-                                id: data.id,
-                                cmd: 'progress',
-                                msg: ``,
-                                max: 0,
-                                value: 0
-                            }
-                            parentPort.postMessage(progress);
+                            console.log(err);
                             return;
                         }
-
                         let cpc = 0;
 
-                        let msg = {
-                            cmd: 'msg',
-                            msg: '',
-                        }
-                        parentPort.postMessage(msg);
-
-                        // Delete files
                         for (let i = 0; i < dirents.length; i++) {
-                            let f = dirents[i]
-                            if (f.type == 'file') {
-                                cpc++
-                                try {
-                                    gio.rm(f.source)
-                                } catch (err) {
 
-                                    let progress = {
-                                        id: data.id,
-                                        cmd: 'progress',
-                                        msg: ``,
-                                        max: 0,
-                                        value: 0
-                                    }
-                                    parentPort.postMessage(progress);
+                            // short cut
+                            let f = dirents[i];
 
-                                    let msg = {
-                                        cmd: 'msg',
-                                        msg: err.message,
-                                        has_timeout: 0
-                                    }
-                                    parentPort.postMessage(msg);
-
-                                    return true;
-                                }
-
-                                data = {
-                                    id: data.id,
-                                    cmd: 'progress',
-                                    msg: `Deleted File ${i} of ${dirents.length}`,
-                                    max: dirents.length,
-                                    value: cpc
-                                }
-                                parentPort.postMessage(data)
-
-                            }
-                        }
-
-                        // Sort directories
-                        dirents.sort((a, b) => {
-                            return b.source.length - a.source.length;
-                        })
-
-                        // Delete directories
-                        for (let i = 0; i < dirents.length; i++) {
-                            let f = dirents[i]
                             if (f.type == 'directory') {
                                 cpc++
-
-                                try {
-                                    gio.rm(f.source)
-                                } catch (err) {
-                                    console.log(err)
-                                }
-
-                                data = {
-                                    id: data.id,
-                                    cmd: 'progress',
-                                    msg: `Deleted Folder ${i} of ${dirents.length}`,
-                                    max: dirents.length,
-                                    value: cpc
-                                }
-                                parentPort.postMessage(data)
+                                // copy_arr.push({ source: f.source, destination: f.destination, is_dir: 1})
+                                del_arr.push({source: f.source, is_dir: 1})
+                            } else {
+                                cpc++
+                                // copy_arr.push({ source: f.source, destination: f.destination, is_dir: 0})
+                                del_arr.push({source: f.source, is_dir: 0})
                             }
+
                         }
 
                         if (cpc === dirents.length) {
-                            // console.log('done deleting files');
-                            data = {
-                                id: data.id,
-                                cmd: 'delete_done',
-                                source: del_item
-                            }
-                            parentPort.postMessage(data)
-                            delete_next();
+                            get_next();
                         }
 
                     })
-
                 } else {
 
-                    try {
-                        gio.rm(del_item);
-                    } catch (err) {
-                        let msg = {
-                            cmd: 'msg',
-                            msg: err.message,
-                            has_timeout: 0
-                        }
-                        parentPort.postMessage(msg);
-                        return;
+                    if (del_item.size) {
+                        max += del_item.size;
                     }
 
-                    data = {
-                        id: data.id,
-                        cmd: 'delete_done',
-                        source: del_item
-                    }
-                    parentPort.postMessage(data)
-                    delete_next();
-
+                    // add to copy array
+                    del_arr.push({ source: del_item, is_dir: 0})
+                    get_next();
                 }
-                // })
 
             }
-            delete_next();
+
+            // start recursive function
+            get_next();
+
+            // Sort directories
+            del_arr.sort((a, b) => {
+                return b.source.length - a.source.length;
+            })
+
+            // clear message
+            msg = {
+                cmd: 'msg',
+                msg: '',
+            }
+            parentPort.postMessage(msg);
+
+            // delete files
+            let progress_data;
+            for (let i = 0; i < del_arr.length; i++) {
+
+                let f = del_arr[i];
+
+                try {
+                    gio.rm(f.source)
+                } catch (err) {
+                    console.log(err)
+                }
+
+                progress_data = {
+                    id: data.id,
+                    cmd: 'progress',
+                    msg: `Deleted File ${i} of ${del_arr.length}`,
+                    max: del_arr.length,
+                    value: i
+                }
+                parentPort.postMessage(progress_data)
+
+            }
+
+            progress_data = {
+                id: data.id,
+                cmd: 'progress',
+                msg: ``,
+                max: 0,
+                value: 0
+            }
+            parentPort.postMessage(progress_data);
+
 
             break;
 
@@ -995,6 +1015,13 @@ parentPort.on('message', data => {
             let copy_arr = [];
             let data_arr = data.copy_arr;
             let progress_id = Math.floor(Math.random() * 100);
+
+            let msg = {
+                cmd: 'msg',
+                msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" />   Getting files for copy operation...`,
+                has_timeout: 0
+            }
+            parentPort.postMessage(msg);
 
             function get_next() {
 
@@ -1066,6 +1093,21 @@ parentPort.on('message', data => {
                 return a.source.length - b.source.length;
             })
 
+            msg = {
+                cmd: 'msg',
+                msg: '',
+            }
+
+            parentPort.postMessage(msg);
+
+            // let interval_cancel = setinterval(() => {
+            //     if (isCancelled) {
+            //         isCancelled = false;
+            //         clearInterval(interval_cancel);
+            //         return;
+            //     }
+            // }, 1000);
+
             for (let i = 0; i < copy_arr.length; i++) {
 
                 let f = copy_arr[i];
@@ -1081,6 +1123,8 @@ parentPort.on('message', data => {
                                 console.log('error', err, f.source, f.destination);
                                 return;
                             }
+
+
 
                             // const current_time = Date.now();
                             bytes_copied0 = bytes_copied;
@@ -1129,8 +1173,6 @@ parentPort.on('message', data => {
                     console.log(err);
                     return;
                 }
-
-
 
             }
 
@@ -1244,16 +1286,6 @@ parentPort.on('message', data => {
                                         try {
                                             cpc++
                                             gio.cp(f.source, f.destination);
-                                            // // gio.mkdir(f.destination)
-                                            // data = {
-                                            //     id: data.id,
-                                            //     cmd: 'progress',
-                                            //     msg: `Creating Directory ${path.basename(destination)} ${i} of ${dirents.length}`, //${path.basename(f.source)}`,
-                                            //     max: dirents.length,
-                                            //     value: cpc
-                                            // }
-                                            // // console.log(data)
-                                            // parentPort.postMessage(data);
 
                                         } catch (err) {
                                             let msg = {
@@ -1354,17 +1386,6 @@ parentPort.on('message', data => {
 
                                     }
 
-                                    // data = {
-                                    //     id: data.id,
-                                    //     cmd: 'progress',
-                                    //     // msg: `Copied File ${i} of ${dirents.length}`,  // ${path.basename(f.source)}`,
-                                    //     msg: `Copying "${path.basename(destination)}" ${i} of ${dirents.length}`,  // ${path.basename(f.source)}`,
-                                    //     max: dirents.length,
-                                    //     value: cpc
-                                    // }
-                                    // // console.log(data)
-                                    // parentPort.postMessage(data);
-
                                 }
                             }
 
@@ -1428,16 +1449,6 @@ parentPort.on('message', data => {
 
                             })
 
-                            // gio.cp(copy_item.source, copy_item.destination, copy_item.overwrite_flag)
-                            // let data = {
-                            //     cmd: 'copy_done',
-                            //     destination: copy_item.destination
-                            // }
-                            // parentPort.postMessage(data);
-                            // parentPort.postMessage({cmd: 'msg', msg: `Copy Complete`});
-
-
-
                         } catch (err) {
                             console.log(err.message);
                             let msg = {
@@ -1476,117 +1487,6 @@ parentPort.on('message', data => {
             break;
         }
 
-        // case 'compress': {
-
-        //     let location = data.location;
-        //     let type = data.type;
-        //     let size = data.size;
-        //     let selected_files_arr = data.files_arr;
-        //     let progress_id = data.id;
-
-        //     let c = 0;
-        //     let cmd = '';
-        //     let file_list = selected_files_arr.map(item => `'${path.basename(item)}'`).join(' ');
-
-        //     // Create command for compressed file
-        //     let destination = path.basename(selected_files_arr[0]);
-        //     selected_files_arr = [];
-
-        //     if (!fs.existsSync(location)) {
-        //         let msg = {
-        //             cmd: 'msg',
-        //             msg: `Error: Directory ${location} does not exist`
-        //         };
-        //         parentPort.postMessage(msg);
-        //         console.log(`Error: Directory ${location} does not exist`);
-        //         break;
-        //     }
-
-        //     // Adjust destination file name based on type
-        //     if (type === 'zip') {
-        //         destination = destination.substring(0, destination.length - path.extname(destination).length) + '.zip';
-        //     } else if (type === 'tar.gz') {
-        //         destination = destination.substring(0, destination.length - path.extname(destination).length) + '.tar.gz';
-        //     } else {
-        //         let msg = {
-        //             cmd: 'msg',
-        //             msg: `Error: Unsupported archive type ${type}`
-        //         };
-        //         parentPort.postMessage(msg);
-        //         console.log(`Error: Unsupported archive type ${type}`);
-        //         break;
-        //     }
-
-        //     let file_path = path.format({ dir: location, base: destination });
-
-        //     // Construct the file-roller command
-        //     cmd = `cd '${location}' && file-roller --add --force '${file_path}' ${file_list}`;
-
-        //     // const compressionRatio = 0.5;
-        //     // let setinterval_id = setInterval(() => {
-        //     //     let file = gio.get_file(file_path);
-        //     //     if (file) {
-        //     //         let progress_opts = {
-        //     //             id: progress_id,
-        //     //             cmd: 'progress',
-        //     //             value: file.size,
-        //     //             max: Math.round(parseInt(size) * compressionRatio),
-        //     //             msg: `Compressing "${path.basename(file_path)}"`
-        //     //         };
-        //     //         parentPort.postMessage(progress_opts);
-        //     //     }
-        //     // }, 1000);
-
-        //     let msg = {
-        //         cmd: 'msg',
-        //         msg: `Compressing "${path.basename(file_path)}"`,
-        //         has_timeout: 0
-        //     };
-        //     parentPort.postMessage(msg);
-
-        //     exec(cmd, { timeout: 5000 }, (err, stdout, stderr) => {
-        //         clearInterval(setinterval_id);
-
-        //         if (err) {
-        //             let msg = {
-        //                 cmd: 'msg',
-        //                 msg: `Error: ${err.message}`
-        //             };
-        //             parentPort.postMessage(msg);
-        //             console.log(`Error: ${err.message}`);
-        //         } else if (stderr) {
-        //             let userInputPatterns = ['[y/N]', 'overwrite', 'permission'];
-        //             if (userInputPatterns.some(pattern => stderr.includes(pattern))) {
-        //                 let msg = {
-        //                     cmd: 'msg',
-        //                     msg: 'Error: User input required during compression'
-        //                 };
-        //                 parentPort.postMessage(msg);
-        //                 console.log('Error: User input required during compression');
-        //             } else {
-        //                 let msg = {
-        //                     cmd: 'msg',
-        //                     msg: `Stderr: ${stderr}`
-        //                 };
-        //                 parentPort.postMessage(msg);
-        //                 console.log(`Stderr: ${stderr}`);
-        //             }
-        //         } else {
-        //             let compress_done = {
-        //                 cmd: 'compress_done',
-        //                 id: progress_id,
-        //                 file_path: file_path,
-        //             };
-        //             parentPort.postMessage(compress_done);
-        //             size = 0;
-        //             c = 0;
-        //         }
-        //         console.log(`Stdout: ${stdout}`);
-        //     });
-
-        //     break;
-        // }
-
         // Compress Files
         case 'compress': {
 
@@ -1599,11 +1499,6 @@ parentPort.on('message', data => {
             let c = 0;
             let cmd = '';
             let file_list = selected_files_arr.map(item => `'${path.basename(item)}'`).join(' ');
-
-            // let file_list = [];
-            // selected_files_arr.forEach((item, idx) => {
-            //     file_list += `'${path.basename(item)}' `;
-            // })
 
             // Create command for compressed file
             let destination = path.basename(selected_files_arr[0]);
@@ -1738,42 +1633,6 @@ parentPort.on('message', data => {
                 c = 0;
 
             });
-
-
-            // let process = exec(cmd, {timeout: 2000 }, (err, stdout, stderr) => {
-
-            //     if (err) {
-            //         let msg = {
-            //             cmd: 'msg',
-            //             msg: err.message
-            //         }
-            //         parentPort.postMessage(msg);
-            //         console.log(err);
-            //     } else if (stderr) {
-            //         let msg = {
-            //             cmd: 'msg',
-            //             msg: stderr
-            //         }
-            //         parentPort.postMessage(msg);
-            //         console.log(stderr);
-            //     }
-
-            //     clearInterval(setinterval_id);
-            //     let compress_done = {
-            //         cmd: 'compress_done',
-            //         id: progress_id,
-            //         file_path: file_path,
-            //     }
-            //     parentPort.postMessage(compress_done);
-            //     size = 0;
-            //     c = 0;
-
-
-            // })
-
-            // process.on('data', (data) => {
-            //     console.log(data);
-            // })
 
             break;
         }
