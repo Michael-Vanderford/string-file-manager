@@ -5,157 +5,193 @@ const path = require('path');
 const gio_utils = require('../utils/gio');
 const gio = require('../gio/build/Release/obj.target/gio')
 
+let isCancelled = 0;
 
 class FileOperation {
 
     constructor() {
         this.progress_id = 0;
+        this.isCancelled = 0;
     }
 
-    // paste (copy_arr) {
+    getIsCancelled() {
+        console.log('getIsCancelled', this.isCancelled);
+        return this.isCancelled;
+    }
 
-    //     let idx = 0;
-    //     this.progress_id += 1;
+    setIsCancelled(val) {
+        console.log('setIsCancelled', val);
+        this.isCancelled = val;
+    }
 
-    //     function copy_next() {
+    // paste
+    paste_recursive(data) {
 
-    //         if (idx === copy_arr.length) {
-    //             // Callback goes here
-    //             return;
-    //         }
+        let idx = 0;
+        let bytes_copied0 = 0;
+        let bytes_copied = 0;
+        let max = 0;
+        let copy_arr = [];
+        let data_arr = data.copy_arr;
+        let progress_id = Math.floor(Math.random() * 100);
 
-    //         let copy_item = copy_arr[idx];
-    //         let source = copy_item.source;
-    //         let destination = copy_item.destination;
-    //         idx++
+        let msg = {
+            cmd: 'msg',
+            msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" />   Getting files for copy operation...`,
+            has_timeout: 0
+        }
+        parentPort.postMessage(msg);
 
-    //         let is_writable = 0;
-    //         if (gio.is_writable(path.dirname(destination))) {
-    //             is_writable = 1;
-    //         } else {
-    //             is_writable = 0;
-    //         }
+        function get_next() {
 
-    //         if (is_writable) {
+            if (idx === data_arr.length) {
+                return;
+            }
 
-    //             // gio_utils.get_file(copy_item.source, file => {
-    //                 let file = gio.get_file(copy_item.source);
+            let copy_item = data_arr[idx];
+            idx++
 
-    //                 if (file.is_dir || file.type === 'directory') {
+            let is_dir = copy_item.is_dir;
+            if (is_dir) {
+                get_files_arr(copy_item.source, copy_item.destination, (err, dirents) => {
 
-    //                     let c = 0;
-    //                     while(gio.exists(destination)) {
-    //                         ++c;
-    //                         var pattern = /\((\d+)\)$/;
-    //                         var match = pattern.exec(destination);
+                    if (err) {
+                        console.log(err);
+                        return;
+                    }
+                    let cpc = 0;
 
-    //                         if (match) {
-    //                             let last_c = parseInt(match[1]);
-    //                             let next_c = last_c + 1;
-    //                             destination = destination.replace(pattern, `(${next_c})`);
-    //                         } else {
-    //                             destination = `${destination} (1)`
-    //                         }
+                    for (let i = 0; i < dirents.length; i++) {
 
-    //                         if (c > 10) {
-    //                             // Bail
-    //                             return;
-    //                         }
-    //                     }
+                        // short cut
+                        let f = dirents[i];
 
-    //                     get_files_arr(copy_item.source, destination, dirents => {
+                        // sanitize file name
+                        f.destination = f.destination.replaceAll(':', '_');
 
-    //                         let data = {};
+                        // calculate max
+                        if (f.size) {
+                            max += f.size;
+                        }
 
-    //                         let size = gio.du(path.dirname("/"))
-    //                         console.log(size);
+                        if (f.type == 'directory') {
+                            cpc++
+                            copy_arr.push({ source: f.source, destination: f.destination, is_dir: 1})
+                        } else {
+                            cpc++
+                            copy_arr.push({ source: f.source, destination: f.destination, is_dir: 0})
+                        }
 
-    //                         let cpc = 0;
-    //                         for (let i = 0; i < dirents.length; i++) {
-    //                             let f = dirents[i]
-    //                             if (f.type == 'directory') {
-    //                                 cpc++
-    //                                 if (!gio.exists(f.destination)) {
-    //                                     gio.cp(f.source, f.destination);
-    //                                     // gio.mkdir(f.destination)
-    //                                     data = {
-    //                                         id: this.progress_id,
-    //                                         cmd: 'progress',
-    //                                         msg: `Created Folder ${i} of ${dirents.length}`, //${path.basename(f.source)}`,
-    //                                         max: dirents.length,
-    //                                         value: cpc
-    //                                     }
-    //                                     parentPort.postMessage(data);
-    //                                 }
-    //                             }
-    //                         }
+                    }
 
-    //                         for (let i = 0; i < dirents.length; i++) {
-    //                             let f = dirents[i]
-    //                             if (f.type == 'file') {
-    //                                 cpc++
-    //                                 if (gio.exists(f.destination)) {
-    //                                     // gio.cp(f.source, f.destination, copy_item.overwrite_flag)
-    //                                 } else {
-    //                                     try {
-    //                                         gio.cp(f.source, f.destination, 0)
-    //                                     } catch (err) {
-    //                                         console.log(err);
-    //                                     }
-    //                                 }
-    //                                 data = {
-    //                                     id: this.progress_id,
-    //                                     cmd: 'progress',
-    //                                     msg: `Copying ${path.basename(destination)} ${i} of ${dirents.length}`,  // ${path.basename(f.source)}`,
-    //                                     max: dirents.length,
-    //                                     value: cpc
+                    if (cpc === dirents.length) {
+                        get_next();
+                    }
 
-    //                                 }
-    //                                 parentPort.postMessage(data);
-    //                             }
-    //                         }
+                })
+            } else {
 
-    //                         if (cpc === dirents.length) {
-    //                             // console.log('done copying files');
-    //                             let data = {
-    //                                 cmd: 'copy_done',
-    //                                 destination: destination
-    //                             }
-    //                             parentPort.postMessage(data);
-    //                             copy_next();
-    //                         }
+                if (copy_item.size) {
+                    max += copy_item.size;
+                }
 
-    //                     })
+                // sanitize file name
+                copy_item.destination = copy_item.destination.replaceAll(':', '_');
 
-    //                 // File
-    //                 } else {
+                // add to copy array
+                copy_arr.push({ source: copy_item.source, destination: copy_item.destination, is_dir: 0})
+                get_next();
+            }
 
-    //                     try {
-    //                         gio.cp(copy_item.source, copy_item.destination, copy_item.overwrite_flag)
-    //                         let data = {
-    //                             cmd: 'copy_done',
-    //                             destination: copy_item.destination
-    //                         }
-    //                         parentPort.postMessage(data);
-    //                         parentPort.postMessage({cmd: 'msg', msg: `Copy Complete`});
+        }
 
-    //                     } catch (err) {
-    //                         console.log(err.message);
-    //                         parentPort.postMessage({cmd: 'msg', msg: err.message});
-    //                     }
-    //                     copy_next();
+        get_next();
 
-    //                 }
+        // sort so we create all the directories first
+        copy_arr.sort((a, b) => {
+            return a.source.length - b.source.length;
+        })
 
-    //             // })
+        msg = {
+            cmd: 'msg',
+            msg: '',
+        }
 
-    //         } else {
-    //             parentPort.postMessage({cmd: 'msg', msg: 'Error: Permission Denied'});
-    //         }
+        parentPort.postMessage(msg);
 
-    //     }
-    //     copy_next();
-    // }
+        // copy the files
+        for (let i = 0; i < copy_arr.length; i++) {
+
+            let f = copy_arr[i];
+            try {
+
+                if (f.is_dir) {
+                    gio.mkdir(f.destination)
+                } else {
+
+                    gio.cp_async(f.source, f.destination, (err, res) => {
+
+                        if (err) {
+                            console.log('error', err, f.source, f.destination);
+                            return;
+                        }
+
+                        // const current_time = Date.now();
+                        bytes_copied0 = bytes_copied;
+
+                        if (res.bytes_copied > 0) {
+                            bytes_copied += parseInt(res.bytes_copied);
+                        }
+
+                        // update progress
+                        let progress_data = {
+                            id: progress_id,
+                            cmd: 'progress',
+                            msg: `Copying `,  // ${path.basename(f.source)}`,
+                            max: max,
+                            value: bytes_copied
+                        }
+                        parentPort.postMessage(progress_data);
+
+                        // File Copy done
+                        if (bytes_copied >= max && bytes_copied > 0) {
+
+                            let progress_done = {
+                                id: progress_id,
+                                cmd: 'progress',
+                                msg: '',
+                                max: 0,
+                                value: 0
+                            }
+                            parentPort.postMessage(progress_done);
+                            bytes_copied = 0;
+
+                            let copy_done = {
+                                cmd: 'copy_done',
+                                destination: f.destination
+                            }
+                            parentPort.postMessage(copy_done);
+
+                        }
+
+                    })
+
+                    if (isCancelled) {
+                        break;
+                    }
+
+                }
+
+            } catch (err) {
+                console.log(err);
+                return;
+            }
+
+        }
+
+        clearInterval(interval);
+
+    }
 
     // Delete
     delete(del_arr) {
@@ -270,23 +306,7 @@ class FileOperation {
 
 }
 
-// class NetworkManager {
-// // Get network settings from network.json
-// getNetworkSettings() {
-//     let network_file = path.join(app.getPath('userData'), 'network.json');
-//     let network_settings = {};
-//     try {
-//         network_settings = JSON.parse(fs.readFileSync(network_file, 'utf-8'));
-//     } catch (err) {
-//         fs.copyFileSync(path.join(__dirname, 'assets/config/network.json'), network_file);
-//         network_settings = JSON.parse(fs.readFileSync(network_file, 'utf-8'));
-//     }
-//     return network_settings;
-// }
-// }
-
 const fileOperation = new FileOperation();
-// const networkManager = new NetworkManager();
 
 let file_arr = [];
 let cp_recursive = 0;
@@ -417,13 +437,12 @@ let cancel_data = {
 // Handle Worker Messages
 parentPort.on('message', data => {
 
-    let isCancelled = false;
-
     // console.log('worker', data);
     switch (data.cmd) {
 
         case 'cancel_operation': {
-            isCancelled = true;
+            isCancelled = 1;
+            console.log('cancel_operation', isCancelled);
             break;
         }
 
@@ -1008,173 +1027,167 @@ parentPort.on('message', data => {
 
         case 'paste_recursive': {
 
-            let idx = 0;
-            let bytes_copied0 = 0;
-            let bytes_copied = 0;
-            let max = 0;
-            let copy_arr = [];
-            let data_arr = data.copy_arr;
-            let progress_id = Math.floor(Math.random() * 100);
+            fileOperation.paste_recursive(data);
 
-            let msg = {
-                cmd: 'msg',
-                msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" />   Getting files for copy operation...`,
-                has_timeout: 0
-            }
-            parentPort.postMessage(msg);
+            // let idx = 0;
+            // let bytes_copied0 = 0;
+            // let bytes_copied = 0;
+            // let max = 0;
+            // let copy_arr = [];
+            // let data_arr = data.copy_arr;
+            // let progress_id = Math.floor(Math.random() * 100);
 
-            function get_next() {
+            // let msg = {
+            //     cmd: 'msg',
+            //     msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" />   Getting files for copy operation...`,
+            //     has_timeout: 0
+            // }
+            // parentPort.postMessage(msg);
 
-                if (idx === data_arr.length) {
-                    return;
-                }
+            // function get_next() {
 
-                let copy_item = data_arr[idx];
-                idx++
-
-                let is_dir = copy_item.is_dir;
-                if (is_dir) {
-                    get_files_arr(copy_item.source, copy_item.destination, (err, dirents) => {
-
-                        if (err) {
-                            console.log(err);
-                            return;
-                        }
-                        let cpc = 0;
-
-                        for (let i = 0; i < dirents.length; i++) {
-
-                            // short cut
-                            let f = dirents[i];
-
-                            // sanitize file name
-                            f.destination = f.destination.replaceAll(':', '_');
-
-                            // calculate max
-                            if (f.size) {
-                                max += f.size;
-                            }
-
-                            if (f.type == 'directory') {
-                                cpc++
-                                copy_arr.push({ source: f.source, destination: f.destination, is_dir: 1})
-                            } else {
-                                cpc++
-                                copy_arr.push({ source: f.source, destination: f.destination, is_dir: 0})
-                            }
-
-                        }
-
-                        if (cpc === dirents.length) {
-                            get_next();
-                        }
-
-                    })
-                } else {
-
-                    if (copy_item.size) {
-                        max += copy_item.size;
-                    }
-
-                    // sanitize file name
-                    copy_item.destination = copy_item.destination.replaceAll(':', '_');
-
-                    // add to copy array
-                    copy_arr.push({ source: copy_item.source, destination: copy_item.destination, is_dir: 0})
-                    get_next();
-                }
-
-            }
-
-            get_next();
-
-            // sort so we create all the directories first
-            copy_arr.sort((a, b) => {
-                return a.source.length - b.source.length;
-            })
-
-            msg = {
-                cmd: 'msg',
-                msg: '',
-            }
-
-            parentPort.postMessage(msg);
-
-            // let interval_cancel = setinterval(() => {
-            //     if (isCancelled) {
-            //         isCancelled = false;
-            //         clearInterval(interval_cancel);
+            //     if (idx === data_arr.length) {
             //         return;
             //     }
-            // }, 1000);
 
-            for (let i = 0; i < copy_arr.length; i++) {
+            //     let copy_item = data_arr[idx];
+            //     idx++
 
-                let f = copy_arr[i];
-                try {
+            //     let is_dir = copy_item.is_dir;
+            //     if (is_dir) {
+            //         get_files_arr(copy_item.source, copy_item.destination, (err, dirents) => {
 
-                    if (f.is_dir) {
-                        gio.mkdir(f.destination)
-                    } else {
+            //             if (err) {
+            //                 console.log(err);
+            //                 return;
+            //             }
+            //             let cpc = 0;
 
-                        gio.cp_async(f.source, f.destination, (err, res) => {
+            //             for (let i = 0; i < dirents.length; i++) {
 
-                            if (err) {
-                                console.log('error', err, f.source, f.destination);
-                                return;
-                            }
+            //                 // short cut
+            //                 let f = dirents[i];
 
+            //                 // sanitize file name
+            //                 f.destination = f.destination.replaceAll(':', '_');
 
+            //                 // calculate max
+            //                 if (f.size) {
+            //                     max += f.size;
+            //                 }
 
-                            // const current_time = Date.now();
-                            bytes_copied0 = bytes_copied;
+            //                 if (f.type == 'directory') {
+            //                     cpc++
+            //                     copy_arr.push({ source: f.source, destination: f.destination, is_dir: 1})
+            //                 } else {
+            //                     cpc++
+            //                     copy_arr.push({ source: f.source, destination: f.destination, is_dir: 0})
+            //                 }
 
-                            if (res.bytes_copied > 0) {
-                                bytes_copied += parseInt(res.bytes_copied);
-                            }
+            //             }
 
-                            // update progress
-                            let progress_data = {
-                                id: progress_id,
-                                cmd: 'progress',
-                                msg: `Copying `,  // ${path.basename(f.source)}`,
-                                max: max,
-                                value: bytes_copied
-                            }
-                            parentPort.postMessage(progress_data);
+            //             if (cpc === dirents.length) {
+            //                 get_next();
+            //             }
 
-                            // console.log('bytes_copied', bytes_copied, max);
-                            // File Copy done
-                            if (bytes_copied >= max && bytes_copied > 0) {
+            //         })
+            //     } else {
 
-                                let progress_done = {
-                                    id: progress_id,
-                                    cmd: 'progress',
-                                    msg: '',
-                                    max: 0,
-                                    value: 0
-                                }
-                                parentPort.postMessage(progress_done);
-                                bytes_copied = 0;
+            //         if (copy_item.size) {
+            //             max += copy_item.size;
+            //         }
 
-                                let copy_done = {
-                                    cmd: 'copy_done',
-                                    destination: f.destination
-                                }
-                                parentPort.postMessage(copy_done);
+            //         // sanitize file name
+            //         copy_item.destination = copy_item.destination.replaceAll(':', '_');
 
-                            }
+            //         // add to copy array
+            //         copy_arr.push({ source: copy_item.source, destination: copy_item.destination, is_dir: 0})
+            //         get_next();
+            //     }
 
-                        })
+            // }
 
-                    }
+            // get_next();
 
-                } catch (err) {
-                    console.log(err);
-                    return;
-                }
+            // // sort so we create all the directories first
+            // copy_arr.sort((a, b) => {
+            //     return a.source.length - b.source.length;
+            // })
 
-            }
+            // msg = {
+            //     cmd: 'msg',
+            //     msg: '',
+            // }
+
+            // parentPort.postMessage(msg);
+
+            // for (let i = 0; i < copy_arr.length; i++) {
+
+            //     let f = copy_arr[i];
+            //     try {
+
+            //         if (f.is_dir) {
+            //             gio.mkdir(f.destination)
+            //         } else {
+
+            //             gio.cp_async(f.source, f.destination, (err, res) => {
+
+            //                 if (err) {
+            //                     console.log('error', err, f.source, f.destination);
+            //                     return;
+            //                 }
+
+            //                 // const current_time = Date.now();
+            //                 bytes_copied0 = bytes_copied;
+
+            //                 if (res.bytes_copied > 0) {
+            //                     bytes_copied += parseInt(res.bytes_copied);
+            //                 }
+
+            //                 // update progress
+            //                 let progress_data = {
+            //                     id: progress_id,
+            //                     cmd: 'progress',
+            //                     msg: `Copying `,  // ${path.basename(f.source)}`,
+            //                     max: max,
+            //                     value: bytes_copied
+            //                 }
+            //                 parentPort.postMessage(progress_data);
+
+            //                 // console.log('bytes_copied', bytes_copied, max);
+            //                 // File Copy done
+            //                 if (bytes_copied >= max && bytes_copied > 0) {
+
+            //                     let progress_done = {
+            //                         id: progress_id,
+            //                         cmd: 'progress',
+            //                         msg: '',
+            //                         max: 0,
+            //                         value: 0
+            //                     }
+            //                     parentPort.postMessage(progress_done);
+            //                     bytes_copied = 0;
+
+            //                     let copy_done = {
+            //                         cmd: 'copy_done',
+            //                         destination: f.destination
+            //                     }
+            //                     parentPort.postMessage(copy_done);
+
+            //                 }
+
+            //             })
+
+            //         }
+
+            //     } catch (err) {
+            //         console.log(err);
+            //         return;
+            //     }
+
+            // }
+
+            // clearInterval(interval);
 
             break;
         }

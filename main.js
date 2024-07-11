@@ -2102,6 +2102,7 @@ ipcMain.on('paste', (e, destination) => {
             }
 
             if (i == selected_files_arr.length - 1) {
+
                 if (copy_arr.length > 0) {
 
                     let paste_worker = new Worker(path.join(__dirname, 'workers/worker.js'));
@@ -2141,8 +2142,8 @@ ipcMain.on('paste', (e, destination) => {
                         }
                     })
 
-                    ipcMain.on('cp_cancel', (e, href) => {
-                        paste_worker.postMessage({ cmd: 'cp_cancel', href: href });
+                    ipcMain.on('cancel_operation', (e) => {
+                        paste_worker.postMessage({ cmd: 'cancel_operation'});
                     })
 
                     progress_id += 1;
