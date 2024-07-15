@@ -87,9 +87,11 @@ document.addEventListener("DOMContentLoaded", (e) => {
             console.log('Select All');
             e.preventDefault();
             let tab_content = document.querySelector('.active-tab-content');
-            let cards = tab_content.querySelectorAll('.card, .tr')
+            let cards = tab_content.querySelectorAll('.card, .tr');
             cards.forEach(card => {
-                card.classList.add('highlight_select');
+                if (!card.classList.contains('hidden')) {
+                    card.classList.add('highlight_select');
+                }
             })
             window.api.getSelectedCount();
         })

@@ -167,6 +167,7 @@ class ProgressManager {
             this.progressBar.remove();
             this.progress.remove();
             this.hideProgress();
+            this.msg = '';
             return;
         }
 
@@ -2938,7 +2939,7 @@ class ViewManager {
 
         this.idx = -1;
 
-        this.chunk_size = 50;
+        this.chunk_size = 100;
         this.chunk_idx = 0;
 
         this.initialX = 0;
@@ -3022,10 +3023,148 @@ class ViewManager {
 
         })
 
+        // Get empt card
+        ipcRenderer.on('get_card_empty', (e, href, event_type) => {
+
+            // utilities.removeEmptyFolderMsg();
+
+            if (event_type === 'created') {
+                this.idx = -1;
+            }
+
+            // add file to dirents
+            // fileOperations.dirents.push(file);
+            // this.files_arr.push(file);
+
+            let active_tab_content = document.querySelector('.active-tab-content');
+            let exists = 0;
+
+            if (view === 'grid') {
+
+                // let folder_grid = active_tab_content.querySelector('.folder_grid');
+                // let file_grid = active_tab_content.querySelector('.file_grid');
+
+                // let empty_msg = document.querySelector('.empty_msg');
+                // if (empty_msg) {
+                //     empty_msg.classList.add('hidden');
+                // }
+
+                // // Check if card already exists
+                // let cards = active_tab_content.querySelectorAll('.card')
+                // cards.forEach(card => {
+                //     if (card.dataset.href === file.href) {
+                //         exists = 1;
+                //         return;
+                //     }
+                // })
+
+                // if (!exists) {
+                //     let card = utilities.getCard(file); //getCardGio(file);
+                //     if (file.is_dir) {
+
+                //         folder_grid.prepend(card);
+                //         getFolderCount(file.href);
+                //         utilities.getFolderSize(file.href);
+
+                //     } else {
+                //         console.log('adding file');
+                //         file_grid.prepend(card);
+                //     }
+                //     // viewManager.lazyload();
+                // } else {
+                //     let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
+                //     let size = card.querySelector('.size');
+                //     size.innerHTML = '';
+
+                //     if (file.is_dir) {
+                //         getFolderCount(file.href);
+                //         utilities.getFolderSize(file.href);
+                //     } else {
+                //         size.innerHTML = getFileSize(file.size);
+                //     }
+
+                // }
+
+            } else if (view === 'list') {
+
+                // // check if tr already exists
+                // let trs = active_tab_content.querySelectorAll('.tr')
+                // trs.forEach(tr => {
+                //     if (tr.dataset.href === file.href) {
+                //         exists = 1;
+                //         return;
+                //     }
+                // })
+
+                // if (!exists) {
+
+                    let table = active_tab_content.querySelector('.list_view');
+                    table.classList.add('hidden');
+
+                    let tbody = active_tab_content.querySelector('.table_body');
+                    if (tbody) {
+
+                        if (this.idx === -1) {
+
+                            // get time
+                            let start = Date.now();
+
+                            // let new_tr = this.getTableRow(file);
+                            let new_tr = document.createElement('tr');
+                            // if (file.is_dir) {
+                            //     // tbody.prepend(new_tr);
+                            // } else {
+                            //     let trs = Array.from(tbody.querySelectorAll('.tr'));
+                            //     // get number of trs with is_dir = true
+                            //     let idx = trs.filter(tr => tr.dataset.is_dir === 'true').length;
+                            //     tbody.insertBefore(new_tr, tbody.rows[idx]);
+                                tbody.prepend(new_tr);
+                            // }
+
+                            // // get time
+                            // let end = Date.now();
+                            // console.log('time', (end - start) / 1000);
+
+
+                        } else {
+
+                            // console.log('running list view', this.idx);
+                            // let new_tr = this.getTableRow(file);
+                            // new_tr.classList.add('new_tr');
+                            // tbody.insertBefore(new_tr, tbody.rows[this.idx]);
+                            // new_tr.classList.remove('new_tr');
+
+                            // if (file.is_dir) {
+                            //     getFolderCount(file.href);
+                            //     utilities.getFolderSize(file.href);
+                            // } else {
+                            //     let size = new_tr.querySelector('.size');
+                            //     size.innerHTML = getFileSize(file.size);
+                            // }
+
+                        }
+
+                        this.idx = -1;
+                    }
+
+                    table.classList.remove('hidden');
+
+                // }
+
+            }
+
+            utilities.dragSelect();
+
+            if (view === 'grid') {
+                iconManager.resizeIcons(localStorage.getItem('icon_size'));
+            } else if (view === 'list') {
+                iconManager.resizeIcons(localStorage.getItem('list_icon_size'));
+            }
+
+        })
+
         // Get Card Gio
         ipcRenderer.on('get_card_gio', (e, file, event_type) => {
-
-            utilities.removeEmptyFolderMsg();
 
             if (event_type === 'created') {
                 this.idx = -1;
@@ -3105,6 +3244,9 @@ class ViewManager {
 
                         if (this.idx === -1) {
 
+                            // get time
+                            let start = Date.now();
+
                             let new_tr = this.getTableRow(file);
                             if (file.is_dir) {
                                 tbody.prepend(new_tr);
@@ -3112,9 +3254,14 @@ class ViewManager {
                                 let trs = Array.from(tbody.querySelectorAll('.tr'));
                                 // get number of trs with is_dir = true
                                 let idx = trs.filter(tr => tr.dataset.is_dir === 'true').length;
-                                console.log('idx', idx)
                                 tbody.insertBefore(new_tr, tbody.rows[idx]);
+                                // tbody.append(new_tr);
                             }
+
+                            // get time
+                            let end = Date.now();
+                            console.log('time', (end - start) / 1000);
+
 
                         } else {
 
@@ -3144,6 +3291,7 @@ class ViewManager {
             }
 
             utilities.dragSelect();
+            utilities.removeEmptyFolderMsg();
 
             if (view === 'grid') {
                 iconManager.resizeIcons(localStorage.getItem('icon_size'));
@@ -3462,7 +3610,6 @@ class ViewManager {
 
         // check if directory
         let is_dir = file['is_dir'];
-
         tr.dataset.is_dir = is_dir;
 
         // column headers array
@@ -3533,6 +3680,7 @@ class ViewManager {
         // highlight for edit mode
         tr.addEventListener('mouseenter', (e) => {
             tr.classList.add('highlight');
+            link.focus();
         })
 
         tr.addEventListener('mouseleave', (e) => {
@@ -3857,14 +4005,14 @@ class ViewManager {
 
     }
 
-    chunk_load1 (chunk_size, idx) {
+    chunk_load1 (idx) {
 
         // console.log('chunk load', chunk_size, idx)
 
         let active_tab_content = document.querySelector('.active-tab-content');
         let tbody = active_tab_content.querySelector('.table_body');
 
-        let end_idx = Math.min(idx + chunk_size, this.files_arr.length);
+        let end_idx = Math.min(idx + this.chunk_size, this.files_arr.length);
 
         for (let i = idx; i < end_idx; i++) {
             let file = this.files_arr[i];
@@ -3882,8 +4030,8 @@ class ViewManager {
         // reload chunk_load1 until complete
         if (end_idx < this.files_arr.length) {
             setTimeout(() => {
-                this.chunk_load1(chunk_size, end_idx);
-            }, 100);
+                this.chunk_load1(end_idx);
+            }, 500);
         }
 
 
@@ -4023,11 +4171,10 @@ class ViewManager {
 
             this.files_arr = this.sort(dirents);
 
-            this.chunk_load1(this.chunk_size, 0);
+            this.chunk_load1(0);
 
             // populate data
             // for (let i = 0; i < this.files_arr.length; i++) {
-
             //     let file = this.files_arr[i];
             //     let tr = this.getTableRow(file)
             //     if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
@@ -4040,13 +4187,11 @@ class ViewManager {
             //         this.getView(file.href);
             //     })
             // };
-
             // this.chunk_load();
             // tbody.classList.remove('tbody_new');
             // if (list_view_table) {
             //     list_view_table.classList.add('post');
             // }
-
             // active_tab_content.addEventListener('scroll', (e) => {
             //     console.log('scrolling')
             //     if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
@@ -4703,8 +4848,17 @@ class FileOperations {
 
     // Run Paste Operation for CTRL+V
     pasteOperation() {
+
         let location = document.querySelector('.location')
         ipcRenderer.send('main', 1);
+
+        let msg = {
+            cmd: 'msg',
+            msg: `<img src="assets/icons/spinner.gif" style="width: 12px; height: 12px" alt="loading" />   Getting files for copy operation...`,
+            has_timeout: 0
+        }
+        utilities.msg(msg.msg, msg.has_timeout);
+
         if (this.cut_flag) {
             this.move(location.value);
         } else {
