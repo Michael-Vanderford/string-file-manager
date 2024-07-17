@@ -102,7 +102,7 @@ class FileManager {
             }
 
             // Call ls worker to get file data
-            ls_worker.postMessage({ cmd: 'ls', source: href, tab: tab});
+            ls_worker.postMessage({ cmd: 'ls', source: href, tab: tab });
 
         } catch (err) {
             win.send('msg', err);
@@ -117,7 +117,7 @@ class FileManager {
 class Utilities {
 
     // Check if executable exists
-    checkExec (executable) {
+    checkExec(executable) {
         try {
             let cmd = `which ${executable}`;
             let res = execSync(cmd).toString().trim();
@@ -411,7 +411,7 @@ class IconManager {
 
 class NetworkManager {
 
-    constructor () {
+    constructor() {
 
         this.network_settings_arr = []
 
@@ -466,7 +466,7 @@ class NetworkManager {
 
     }
 
-    connectNetwork () {
+    connectNetwork() {
         let cmd = {
             cmd: 'connect_network',
             network_settings: this.getNetworkSettings()
@@ -599,7 +599,7 @@ worker.on('message', (data) => {
             }
             break;
         }
-        case  'mkdir_done': {
+        case 'mkdir_done': {
 
             if (is_main && watcher_failed) {
                 try {
@@ -622,7 +622,7 @@ worker.on('message', (data) => {
             }
             break;
         }
-        case  'copy_done': {
+        case 'copy_done': {
             if (is_main) {
                 if (watcher_failed) {
                     let file = gio.get_file(data.destination);
@@ -639,22 +639,22 @@ worker.on('message', (data) => {
             win.send('clear');
             break;
         }
-        case  'cp_template_done': {
+        case 'cp_template_done': {
             if (is_main) {
                 // if (watcher_failed) {
-                    let file = gio.get_file(data.destination);
-                    win.send('get_card_gio', file, 'created');
-                    win.send('edit', data.destination);
+                let file = gio.get_file(data.destination);
+                win.send('get_card_gio', file, 'created');
+                win.send('edit', data.destination);
                 // }
                 break;
             }
 
         }
-        case  'delete_done': {
+        case 'delete_done': {
             win.send('remove_card', data.source);
             win.send('msg', `Deleted "${path.basename(data.source)}"`);
             break;
-        }f
+        } f
         case 'progress': {
             win.send('set_progress', data)
             if (data.value == data.max) {
@@ -674,7 +674,7 @@ worker.on('message', (data) => {
             win.send('count', data.source, data.count);
             break;
         }
-        case  'folder_size_done': {
+        case 'folder_size_done': {
             win.send('folder_size', data.source, data.folder_size);
             break;
         }
@@ -712,7 +712,7 @@ worker.on('message', (data) => {
 
 // Save Recent File
 
-function get_properties (href) {
+function get_properties(href) {
     if (href !== '/' && path.basename(href) !== 'Recent') {
         let selected_files_arr = [];
         // console.log('get_properties', href);
@@ -1900,16 +1900,16 @@ ipcMain.on('clip', (e, href) => {
 
 // Get Devices
 ipcMain.on('get_devices', (e) => {
-    worker.postMessage({ cmd: 'get_devices'});
+    worker.postMessage({ cmd: 'get_devices' });
     // setTimeout(() => {
-        // // Monitor USB Devices
-        // gio.monitor(data => {
-        //     if (data) {
-        //         if (data != 'mtp') {
-        //             worker.postMessage({ cmd: 'get_devices'});
-        //         }
-        //     }
-        // });
+    // // Monitor USB Devices
+    // gio.monitor(data => {
+    //     if (data) {
+    //         if (data != 'mtp') {
+    //             worker.postMessage({ cmd: 'get_devices'});
+    //         }
+    //     }
+    // });
     // }, 5000);
 })
 
@@ -1917,7 +1917,7 @@ ipcMain.on('get_devices', (e) => {
 gio.monitor(data => {
     if (data) {
         if (data != 'mtp') {
-            worker.postMessage({ cmd: 'get_devices'});
+            worker.postMessage({ cmd: 'get_devices' });
         }
     }
 });
@@ -2046,7 +2046,7 @@ ipcMain.on('paste', (e, destination) => {
     is_active = 1;
 
     for (let i = 0; i < selected_files_arr.length; i++) {
-        copy_arr.push({source: selected_files_arr[i], destination: path.format({ dir: location, base: path.basename(selected_files_arr[i])})});
+        copy_arr.push({ source: selected_files_arr[i], destination: path.format({ dir: location, base: path.basename(selected_files_arr[i]) }) });
     }
 
     let paste_worker = new Worker(path.join(__dirname, 'workers/worker.js'));
@@ -2071,8 +2071,14 @@ ipcMain.on('paste', (e, destination) => {
             }
             case 'file_data': {
                 watcher_enabled = 0;
-                let file_data = data.file_data;
-                win.send('get_card_gio', file_data);
+                // let file_data = data.file_data;
+                // win.send('get_card_gio', file_data);
+                break;
+            }
+            case 'copy_arr_data': {
+                watcher_enabled = 0;
+                let copy_arr_data = data.copy_arr;
+                win.send('get_cards', copy_arr_data);
                 break;
             }
             case 'copy_done': {
@@ -2357,19 +2363,19 @@ function createWindow() {
     });
 
     // win.on('close', (e) => {
-        // if (is_active) {
-        //         const choice = dialog.showMessageBoxSync(mainWindow, {
-        //         type: 'warning',
-        //         buttons: ['Cancel', 'Close Anyway'],
-        //         title: 'Warning',
-        //         message: 'An operation is still active. Are you sure you want to close?',
-        //         defaultId: 1,
-        //         cancelId: 0
-        //     });
-        //     if (choice === 0) {
-        //     e.preventDefault(); // Prevent the window from closing
-        //     }
-        // }
+    // if (is_active) {
+    //         const choice = dialog.showMessageBoxSync(mainWindow, {
+    //         type: 'warning',
+    //         buttons: ['Cancel', 'Close Anyway'],
+    //         title: 'Warning',
+    //         message: 'An operation is still active. Are you sure you want to close?',
+    //         defaultId: 1,
+    //         cancelId: 0
+    //     });
+    //     if (choice === 0) {
+    //     e.preventDefault(); // Prevent the window from closing
+    //     }
+    // }
     // })
 
     win.on('closed', () => {
@@ -3147,7 +3153,7 @@ ipcMain.on('main_menu', (e, destination) => {
                             type: 'separator'
                         }
                     }
-            }],
+                }],
         },
         {
             type: 'separator'
@@ -3957,7 +3963,7 @@ ipcMain.on('merge_file_menu', (e, href) => {
         },
         {
             label: 'Properties',
-            icon: path.join(__dirname, 'assets/icons/menu/properties.png'),icon: path.join(__dirname, 'assets/icons/menu/properties.png'),
+            icon: path.join(__dirname, 'assets/icons/menu/properties.png'), icon: path.join(__dirname, 'assets/icons/menu/properties.png'),
             accelerator: process.platform == 'darwin' ? settings.keyboard_shortcuts.Properties : settings.keyboard_shortcuts.Properties,
             click: () => {
                 e.sender.send('context-menu-command', 'properties')

@@ -3301,6 +3301,24 @@ class ViewManager {
 
         })
 
+        // Get Cards
+        ipcRenderer.on('get_cards', (e, files_arr) => {
+
+            console.log('view', view)
+            if (view === 'list') {
+                let active_tab_content = document.querySelector('.active-tab-content');
+                let tbody = active_tab_content.querySelector('.table_body');
+                for (let i = 0; i < files_arr.length; i++) {
+                    let f = files_arr[i];
+                    let tr = viewManager.getTableRow(f);
+                    tbody.prepend(tr);
+                    console.log('appending tr', tr)
+                    console.log('tb', tbody)
+                }
+            }
+
+        })
+
         // Remove Card
         ipcRenderer.on('remove_card', (e, href) => {
 
