@@ -163,6 +163,13 @@ class FileOperation {
 
         let start = Date.now();
 
+        // // send array to main thread
+        // let copy_data = {
+        //     cmd: 'copy_arr_data',
+        //     copy_arr: copy_arr
+        // }
+        // parentPort.postMessage(copy_data);
+
         // sort so we create all the directories first
         copy_arr.sort((a, b) => {
             return a.source.length - b.source.length;
@@ -175,14 +182,8 @@ class FileOperation {
         }
         parentPort.postMessage(msg);
 
-
-        // send array to main thread
-        let copy_data = {
-            cmd: 'copy_arr_data',
-            copy_arr: copy_arr
-        }
-        parentPort.postMessage(copy_data);
-
+        let total_bytes_copied = 0;
+        let total_max = copy_arr.reduce((acc, f) => acc + f.size, 0);
 
         // copy files
         for (let i = 0; i < copy_arr.length; i++) {
@@ -202,17 +203,17 @@ class FileOperation {
                         }
 
                         // const current_time = Date.now();
-                        bytes_copied0 = bytes_copied;
 
+                        bytes_copied0 = bytes_copied;
                         if (res.bytes_copied > 0) {
                             bytes_copied += parseInt(res.bytes_copied);
                         }
 
                         // update progress
                         let progress_data = {
-                            id: 100,
+                            id: progress_id,
                             cmd: 'progress',
-                            msg: `Copying`,  // ${path.basename(f.source)}`,
+                            msg: `Copying ${path.basename(f.source)}`,
                             max: max,
                             value: bytes_copied
                         }

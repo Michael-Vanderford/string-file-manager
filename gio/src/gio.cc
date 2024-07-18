@@ -876,13 +876,13 @@ namespace gio {
 
             GError* error = nullptr;
             gboolean result = g_file_copy(src,
-                        dest,
-                        G_FILE_COPY_ALL_METADATA,
-                        cancellable,
-                        (GFileProgressCallback) gio::progress_callback,
-                        callback,
-                        // new Nan::Callback(info[info.Length() - 1].As<v8::Function>()),
-                        &error);
+                                        dest,
+                                        G_FILE_COPY_ALL_METADATA,
+                                        cancellable,
+                                        (GFileProgressCallback) gio::progress_callback,
+                                        callback,
+                                        // new Nan::Callback(info[info.Length() - 1].As<v8::Function>()),
+                                        &error);
 
             if (!result) {
                 v8::Local<v8::Value> argv[] = {

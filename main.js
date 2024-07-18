@@ -2035,6 +2035,8 @@ ipcMain.handle('get_icon', async (e, href) => {
     })
 })
 
+
+
 ipcMain.on('paste', (e, destination) => {
 
     let copy_arr = [];
