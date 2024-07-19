@@ -152,7 +152,17 @@ class FileOperation {
                     f.display_name = path.basename(f.destination);
                     copy_arr.push(f);
 
+                    // if (i === data_arr.length - 1) {
+                    //     let copy_data = {
+                    //         cmd: 'copy_arr_data',
+                    //         copy_arr: copy_arr
+                    //     }
+                    //     parentPort.postMessage(copy_data);
+                    // }
+
                 }
+
+
 
             }
 
@@ -213,7 +223,7 @@ class FileOperation {
                         let progress_data = {
                             id: progress_id,
                             cmd: 'progress',
-                            msg: `Copying ${path.basename(f.source)}`,
+                            msg: `Copying ${path.basename(f.destination)}`,
                             max: max,
                             value: bytes_copied
                         }
