@@ -31,7 +31,8 @@ class FileOperation {
         let max = 0;
         let copy_arr = [];
         let data_arr = data.copy_arr;
-        let progress_id = Math.floor(Math.random() * 100);
+        // let progress_id = Math.floor(Math.random() * 100);
+        let progress_id = data.id;
 
         let msg = {
             cmd: 'msg',
@@ -46,7 +47,7 @@ class FileOperation {
 
             for (let i = 0; i < data_arr.length; i++) {
 
-                let f = gio.get_file(data_arr[i].source);
+                let f = f.data_arr[i]; //gio.get_file(data_arr[i].source);
                 f.destination = data_arr[i].destination;
 
                 // process directory
@@ -152,17 +153,15 @@ class FileOperation {
                     f.display_name = path.basename(f.destination);
                     copy_arr.push(f);
 
-                    // if (i === data_arr.length - 1) {
-                    //     let copy_data = {
-                    //         cmd: 'copy_arr_data',
-                    //         copy_arr: copy_arr
-                    //     }
-                    //     parentPort.postMessage(copy_data);
-                    // }
+                    if (i === data_arr.length - 1) {
+                        let copy_data = {
+                            cmd: 'copy_arr_data',
+                            copy_arr: copy_arr
+                        }
+                        parentPort.postMessage(copy_data);
+                    }
 
                 }
-
-
 
             }
 
@@ -192,9 +191,6 @@ class FileOperation {
         }
         parentPort.postMessage(msg);
 
-        let total_bytes_copied = 0;
-        let total_max = copy_arr.reduce((acc, f) => acc + f.size, 0);
-
         // copy files
         for (let i = 0; i < copy_arr.length; i++) {
 
@@ -205,6 +201,8 @@ class FileOperation {
                     gio.mkdir(f.destination)
                 } else {
 
+                    // add watcher for progress
+
                     gio.cp_async(f.source, f.destination, (err, res) => {
 
                         if (err) {
@@ -212,12 +210,17 @@ class FileOperation {
                             return;
                         }
 
-                        // const current_time = Date.now();
+                        // console.log('bytes_copied', res, max);
 
+                        // const current_time = Date.now();
                         bytes_copied0 = bytes_copied;
                         if (res.bytes_copied > 0) {
                             bytes_copied += parseInt(res.bytes_copied);
                         }
+                        // bytes_copied0 = bytes_copied;
+                        // if (res.bytes_read > 0) {
+                        //     bytes_copied += parseInt(res.bytes_read);
+                        // }
 
                         // update progress
                         let progress_data = {
@@ -254,6 +257,56 @@ class FileOperation {
                         }
 
                     })
+
+                    // gio.cp_async(f.source, f.destination, (err, res) => {
+
+                    //     if (err) {
+                    //         console.log('error', err, f.source, f.destination);
+                    //         return;
+                    //     }
+
+                    //     // const current_time = Date.now();
+
+                    //     bytes_copied0 = bytes_copied;
+                    //     if (res.bytes_copied > 0) {
+                    //         bytes_copied += parseInt(res.bytes_copied);
+                    //     }
+
+                    //     // update progress
+                    //     let progress_data = {
+                    //         id: progress_id,
+                    //         cmd: 'progress',
+                    //         msg: `Copying ${path.basename(f.destination)}`,
+                    //         max: 1,
+                    //         value: 1
+                    //     }
+                    //     parentPort.postMessage(progress_data);
+
+                    //     // console.log('bytes_copied', bytes_copied, max);
+                    //     // File Copy done
+                    //     if (bytes_copied >= max && bytes_copied > 0) {
+
+                    //         let progress_done = {
+                    //             id: progress_id,
+                    //             cmd: 'progress',
+                    //             msg: '',
+                    //             max: 0,
+                    //             value: 0
+                    //         }
+                    //         parentPort.postMessage(progress_done);
+                    //         bytes_copied = 0;
+
+                    //         let copy_done = {
+                    //             cmd: 'copy_done',
+                    //             destination: f.destination
+                    //         }
+                    //         parentPort.postMessage(copy_done);
+
+                    //         max = 0;
+
+                    //     }
+
+                    // })
 
                 }
 
@@ -691,14 +744,14 @@ parentPort.on('message', data => {
         case 'folder_size': {
 
             try {
-                let cmd = 'cd "' + data.source + '"; du -s';
+                let cmd = 'cd "' + data.source + '"; du -b -s';
                 exec(cmd, (err, stdout, stderr) => {
                     if (err) {
                         // console.error(stderr, cmd);
                         // return 0;
                     }
                     let size = parseFloat(stdout.replace(/[^0-9.]/g, ''));
-                    size = (size * 1024);
+                    size = size;
                     let worker_data = {
                         cmd: 'folder_size',
                         source: data.source,
@@ -773,9 +826,7 @@ parentPort.on('message', data => {
                 parentPort.postMessage(worker_data);
 
             });
-
             break;
-
         }
 
         case 'count':{
@@ -852,7 +903,7 @@ parentPort.on('message', data => {
                         gio.mv(f.source, f.destination, (err, progress_data) => {
 
                             if (err) {
-                                parentPort.postMessage({ cmd: 'msg', msg: err.message });
+                                parentPort.postMessage({ cmd: 'msg', msg: err.message, has_timeout: 0 });
                                 return;
                             }
 
@@ -1081,12 +1132,11 @@ parentPort.on('message', data => {
             for (let i = 0; i < del_arr.length; i++) {
 
                 let f = del_arr[i];
-
-                try {
-                    gio.rm(f.source)
-                } catch (err) {
-                    console.log(err)
-                }
+                // try {
+                gio.rm(f.source)
+                // } catch (err) {
+                    // console.log(err)
+                // }
 
                 progress_data = {
                     id: data.id,
@@ -1108,6 +1158,7 @@ parentPort.on('message', data => {
             }
             parentPort.postMessage(progress_data);
 
+            del_arr = [];
 
             break;
 

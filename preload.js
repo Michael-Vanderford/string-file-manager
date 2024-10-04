@@ -584,6 +584,7 @@ class Utilities {
 
         input.classList.add('input', 'item', 'hidden');
         img.classList.add('icon');
+        img.loading = 'lazy';
 
         card.style.opacity = 1;
 
@@ -1149,7 +1150,7 @@ class Utilities {
 
     getIcon(file, icon_div) {
 
-        try {
+        // try {
 
             let img = document.createElement('img');
             let video = document.createElement('video');
@@ -1213,12 +1214,12 @@ class Utilities {
                 })
             }
 
-        } catch (err) {
-            ipcRenderer.invoke('get_icon', (file.href)).then(res => {
-                img.src = res;
-                icon_div.append(img);
-            })
-        }
+        // } catch (err) {
+        //     ipcRenderer.invoke('get_icon', (file.href)).then(res => {
+        //         img.src = res;
+        //         icon_div.append(img);
+        //     })
+        // }
 
     }
 
@@ -2939,7 +2940,7 @@ class ViewManager {
 
         this.idx = -1;
 
-        this.chunk_size = 100;
+        this.chunk_size = 500;
         this.chunk_idx = 0;
 
         this.initialX = 0;
@@ -3188,15 +3189,15 @@ class ViewManager {
                 }
 
                 // Check if card already exists
-                let cards = active_tab_content.querySelectorAll('.card')
-                cards.forEach(card => {
-                    if (card.dataset.href === file.href) {
-                        exists = 1;
-                        return;
-                    }
-                })
+                // let cards = active_tab_content.querySelectorAll('.card')
+                // cards.forEach(card => {
+                //     if (card.dataset.href === file.href) {
+                //         exists = 1;
+                //         return;
+                //     }
+                // })
 
-                if (!exists) {
+                // if (!exists) {
                     let card = utilities.getCard(file); //getCardGio(file);
                     if (file.is_dir) {
 
@@ -3209,19 +3210,19 @@ class ViewManager {
                         file_grid.prepend(card);
                     }
                     // viewManager.lazyload();
-                } else {
-                    let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
-                    let size = card.querySelector('.size');
-                    size.innerHTML = '';
+                // } else {
+                //     let card = active_tab_content.querySelector(`[data-href="${file.href}"]`);
+                //     let size = card.querySelector('.size');
+                //     size.innerHTML = '';
 
-                    if (file.is_dir) {
-                        getFolderCount(file.href);
-                        utilities.getFolderSize(file.href);
-                    } else {
-                        size.innerHTML = getFileSize(file.size);
-                    }
+                //     if (file.is_dir) {
+                //         getFolderCount(file.href);
+                //         utilities.getFolderSize(file.href);
+                //     } else {
+                //         size.innerHTML = getFileSize(file.size);
+                //     }
 
-                }
+                // }
 
             } else if (view === 'list') {
 
@@ -3305,16 +3306,54 @@ class ViewManager {
         ipcRenderer.on('get_cards', (e, files_arr) => {
 
             console.log('view', view)
-            if (view === 'list') {
-                let active_tab_content = document.querySelector('.active-tab-content');
+            let active_tab_content = document.querySelector('.active-tab-content');
+
+            let grids = ['folder_grid', 'file_grid', 'hidden_folder_grid'];
+            let folder_grid = active_tab_content.querySelector('.folder_grid');
+            let file_grid = active_tab_content.querySelector('.file_grid');
+
+            if (view === 'grid') {
+
+                for (let i = 0; i < files_arr.length; i++) {
+
+                    let f = files_arr[i];
+                    let card = utilities.getCard(f);
+                    if (f.is_dir) {
+
+                        folder_grid.prepend(card);
+                        // getFolderCount(file.href);
+                        utilities.getFolderSize(file.href);
+
+                    } else {
+                        file_grid.prepend(card);
+                    }
+
+                }
+
+            } else {
+
+                let idx = 0; //active_tab_content.querySelectorAll('[data-is_dir="true"]').length;
                 let tbody = active_tab_content.querySelector('.table_body');
                 for (let i = 0; i < files_arr.length; i++) {
-                    let f = files_arr[i];
-                    let tr = viewManager.getTableRow(f);
-                    tbody.prepend(tr);
-                    console.log('appending tr', tr)
-                    console.log('tb', tbody)
+
+                    let interval = setInterval(() => {
+
+                        let f = files_arr[i];
+                        let tr = viewManager.getTableRow(f);
+                        if (f.is_dir) {
+                            tbody.insertBefore(tr, tbody.rows[idx]);
+                        } else {
+                            tbody.append(tr);
+                        }
+
+                        if (i === files_arr.length - 1) {
+                            clearInterval(interval);
+                        }
+
+                    }, 100)
+
                 }
+
             }
 
         })
@@ -3620,6 +3659,9 @@ class ViewManager {
         tr.dataset.type = file.content_type
         tr.dataset.size = file.size;
         tr.dataset.is_hidden = file.is_hidden;
+        tr.dataset.mtime = file.mtime;
+        tr.dataset.atime = file.atime;
+        tr.dataset.ctime = file.ctime;
         tr.classList.add('tr', 'new_tr');
 
         link.draggable = false;
@@ -3627,7 +3669,7 @@ class ViewManager {
         tr.draggable = true;
 
         // check if directory
-        let is_dir = file['is_dir'];
+        let is_dir = file.is_dir;
         tr.dataset.is_dir = is_dir;
 
         // column headers array
@@ -4049,7 +4091,7 @@ class ViewManager {
         if (end_idx < this.files_arr.length) {
             setTimeout(() => {
                 this.chunk_load1(end_idx);
-            }, 500);
+            }, 1000);
         }
 
 
@@ -4189,27 +4231,27 @@ class ViewManager {
 
             this.files_arr = this.sort(dirents);
 
-            this.chunk_load1(0);
+            // this.chunk_load1(0);
 
             // populate data
-            // for (let i = 0; i < this.files_arr.length; i++) {
-            //     let file = this.files_arr[i];
-            //     let tr = this.getTableRow(file)
-            //     if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
-            //         if (file.is_hidden) {
-            //             tr.classList.add('hidden');
-            //         }
-            //     }
-            //     tbody.appendChild(tr);
-            //     tr.addEventListener('dblclick', (e) => {
-            //         this.getView(file.href);
-            //     })
-            // };
-            // this.chunk_load();
+            for (let i = 0; i < this.files_arr.length; i++) {
+                let file = this.files_arr[i];
+                let tr = this.getTableRow(file)
+                if (settings['Hidden Files'] && settings['Hidden Files'].show === false) {
+                    if (file.is_hidden) {
+                        tr.classList.add('hidden');
+                    }
+                }
+                tbody.appendChild(tr);
+                tr.addEventListener('dblclick', (e) => {
+                    this.getView(file.href);
+                })
+            };
             // tbody.classList.remove('tbody_new');
             // if (list_view_table) {
-            //     list_view_table.classList.add('post');
-            // }
+                //     list_view_table.classList.add('post');
+                // }
+            // this.chunk_load();
             // active_tab_content.addEventListener('scroll', (e) => {
             //     console.log('scrolling')
             //     if (active_tab_content.scrollTop + active_tab_content.clientHeight >= active_tab_content.scrollHeight) {
@@ -4860,7 +4902,8 @@ class FileOperations {
     paste(destination) {
         console.log('running paste', destination)
         utilities.clearFolderSize(destination);
-        ipcRenderer.send('paste', destination);
+        // ipcRenderer.send('paste', destination);
+        ipcRenderer.send('paste_recursive', destination);
         clearHighlight();
     }
 
@@ -5729,6 +5772,7 @@ ipcRenderer.on('merge_files', (e, merge_arr, is_move) => {
                     let img = document.createElement('img');
                     img.classList.add('icon', 'icon16');
                     img.src = icon;
+                    img.loading = 'lazy';
 
                     // console.log('what', item.content_type);
                     if (item.content_type.indexOf('image/') > -1) {
@@ -8122,27 +8166,51 @@ function getRecentView(dirents) {
  */
 function getSelectedFiles() {
 
+    let selected_files_arr2 = [];
     selected_files_arr = [];
     let active_tab_content = document.querySelector('.active-tab-content');
     let selected_items = Array.from(active_tab_content.querySelectorAll('.highlight, .highlight_select'));
     selected_items.forEach(item => {
 
-        selected_files_arr.push(item.dataset.href);
-        if (item.dataset.type.startsWith('image/')) {
-            console.log(item.dataset.type)
-            ipcRenderer.send('copy_to_clipboard', item.dataset.href);
+        let is_dir_str = item.dataset.is_dir;
+        let is_dir = false;
+        if (is_dir_str === 'true') {
+            is_dir = true;
+        } else {
+            is_dir = false;
         }
 
+        let file_obj = {
+            name: item.dataset.name,
+            href: item.dataset.href,
+            content_type: item.dataset.type,
+            size: item.dataset.size,
+            mtime: item.dataset.mtime,
+            atime: item.dataset.atime,
+            ctime: item.dataset.ctime,
+            is_dir: is_dir
+        }
+        selected_files_arr2.push(file_obj);
+        selected_files_arr.push(item.dataset.href);
+
+        console.log('file_obj', file_obj)
+
+        // if (item.dataset.type.startsWith('image/')) {
+        //     console.log(item.dataset.type)
+        //     ipcRenderer.send('copy_to_clipboard', item.dataset.href);
+        // }
+
     })
+
     if (selected_files_arr.length == 1) {
-        // utilities.msg(`${selected_files_arr.length} Item Selected`);
         utilities.getSelectedCopy();
     } else if (selected_files_arr.length > 1) {
-        // utilities.msg(`${selected_files_arr.length} Items Selected`);
         utilities.getSelectedCopy();
     } else {
         utilities.msg(`No Items Selected`);
     }
+
+    ipcRenderer.send('get_selected_files2', selected_files_arr2);
 
     // console.log(selected_files_arr)
     ipcRenderer.send('get_selected_files', selected_files_arr);

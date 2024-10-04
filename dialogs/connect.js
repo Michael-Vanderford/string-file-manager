@@ -129,7 +129,7 @@ ipcRenderer.on('connect', (e) => {
             }
 
             ipcRenderer.invoke('connect', cmd).then(res => {
-
+                msg_connect.innerHTML = res.msg;
             })
 
 

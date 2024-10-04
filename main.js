@@ -38,6 +38,7 @@ let watcher_enabled = 1;
 let progress_id = 0;
 let is_active = 0;
 
+let selected_files_arr2 = []
 let selected_files_arr = []
 let selected_files_delete_arr = []
 
@@ -66,7 +67,7 @@ class FileManager {
                     // if (watcher.event === 'created' || watcher.event === 'changed') {
                     if (watcher.event === 'created' && watcher_enabled) {
                         try {
-                            console.log('watcher event', watcher.event);
+                            // console.log('watcher event', watcher.event);
                             let file = gio.get_file(watcher.filename);
                             if (file) {
                                 win.send('get_card_gio', file, watcher.event);
@@ -137,9 +138,7 @@ class Utilities {
 class watcher {
 
     constructor() {
-        /**
-         * Watch for theme changes
-         */
+
         gio.on_theme_change(() => {
             win.webContents.reloadIgnoringCache();
             win.reload();
@@ -586,6 +585,7 @@ worker.on('message', (data) => {
                 win.send('remove_card', data.source);
             }
 
+            watcher_enabled = 1;
             win.send('lazyload');
             win.send('clear');
             break;
@@ -1780,6 +1780,12 @@ ipcMain.handle('get_thumbnail', (e, href) => {
     return thumbnail;
 })
 
+// Populate global selected files array 2
+ipcMain.on('get_selected_files2', (e, selected_files2) => {
+    selected_files_arr2 = selected_files2;
+    // // console.log('selected files array', selected_files_arr);
+})
+
 // Populate global selected files array
 ipcMain.on('get_selected_files', (e, selected_files) => {
     selected_files_arr = selected_files;
@@ -2031,10 +2037,215 @@ ipcMain.handle('get_icon', async (e, href) => {
     return await app.getFileIcon(href, { size: 32 }).then(icon => {
         return icon.toDataURL();
     }).catch((err) => {
+        console.log(err);
         return err;
     })
 })
 
+let interval = 0;
+let stop_progress = 0;
+function handle_paste_worker_data (data) {
+    let watcher;
+    switch (data.cmd) {
+        case 'msg': {
+            win.send('msg', data.msg, data.has_timeout);
+            break;
+        }
+        case 'progress': {
+            win.send('set_progress', data)
+            break;
+        }
+        // case 'file_data': {
+        //     watcher_enabled = 0;
+        //     let file_data = data.file_data;
+        //     win.send('get_card_gio', file_data);
+        //     break;
+        // }
+        // case 'copy_arr_data': {
+        //     watcher_enabled = 0;
+        //     let copy_arr_data = data.copy_arr;
+        //     win.send('get_cards', copy_arr_data);
+        //     break;
+        // }
+        case 'copy_done': {
+            if (is_main) {
+                if (watcher_failed) {
+                    let file = gio.get_file(data.destination);
+                    win.send('remove_card', data.destination);
+                    win.send('get_card_gio', file);
+                }
+            } else {
+                if (!is_main) {
+                    win.send('get_folder_count', path.dirname(data.destination));
+                    win.send('get_folder_size', path.dirname(data.destination));
+                }
+            }
+
+            // clearInterval(interval);
+
+            // win.send('lazyload');
+            // win.send('clear');
+            watcher_enabled = 1;
+            paste_worker.terminate();
+
+            break;
+        }
+
+    }
+
+}
+
+function getDirSizeAsync(destination) {
+    return new Promise((resolve, reject) => {
+        exec(`du -b -s '${destination}'`, (err, stdout) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(stdout.split('\t')[0]);
+        });
+    });
+}
+
+const CHUNK_SIZE = 100;
+
+ipcMain.on('paste_recursive', async (e, destination) => {
+    let copy_arr = [];
+
+    selected_files_arr2.forEach(file => {
+        let f = { ...file };
+        f.source = path.normalize(f.href);
+        f.destination = path.normalize(path.format({ dir: destination, base: path.basename(f.source) }));
+
+        if (f.source === f.destination) {
+            while (gio.exists(f.destination)) {
+                let ext = path.extname(f.destination);
+                let base = path.basename(f.destination, ext);
+                let dir = path.dirname(f.destination);
+                let new_base = base + ' (Copy)';
+                f.destination = path.join(dir, new_base + ext);
+            }
+        }
+
+        // Sanitize file name
+        f.destination = f.destination.replaceAll(':', '_');
+        f.name = path.basename(f.destination);
+        f.display_name = path.basename(f.destination);
+        f.href = f.destination;
+
+        copy_arr.push(f);
+    });
+
+    let max = copy_arr.reduce((acc, item) => parseInt(acc) + parseInt(item.size), 0);
+    let progress_id = Math.floor(Math.random() * 1000);
+
+    watcher_enabled = 0;
+    win.send('get_cards', copy_arr);
+
+    // Function to process chunks
+    const processChunk = (chunk) => {
+        // return new Promise((resolve) => {
+            let paste_worker = new Worker(path.join(__dirname, 'workers/paste.js'));
+            paste_worker.setMaxListeners(chunk.length);
+
+            let paste_data = {
+                id: progress_id,
+                cmd: 'paste_recursive',
+                copy_arr: chunk,
+                destination: destination,
+            };
+            paste_worker.postMessage(paste_data);
+
+            paste_worker.on('message', (data) => {
+                handle_paste_worker_data(data);
+            });
+
+            paste_worker.on('error', (error) => {
+                console.error('Worker error:', error);
+            });
+
+            paste_worker.on('exit', (code) => {
+                if (code !== 0) {
+                    console.error(`Worker stopped with exit code ${code}`);
+                }
+                resolve();
+            });
+        // });
+    };
+
+
+
+    // Process files in chunks
+    for (let i = 0; i < copy_arr.length; i += CHUNK_SIZE) {
+        const chunk = copy_arr.slice(i, i + CHUNK_SIZE);
+        processChunk(chunk);
+    }
+
+
+});
+
+// // this is the current paste function
+// ipcMain.on('paste_recursive', async (e, destination) => {
+
+//     let copy_arr = [];
+
+//     selected_files_arr2.forEach(file => {
+
+//         let f = file;
+//         f.source = path.normalize(f.href);
+//         f.destination = path.normalize(path.format({ dir: destination, base: path.basename(f.source) }));
+
+//         if (f.source === f.destination) {
+
+//             // todo: this needs work
+//             // while (f.href === f.destination) {
+//             while (gio.exists(f.destination)) {
+
+//                 // let file = gio.get_file(destination);
+//                 let ext = path.extname(f.destination);
+//                 let base = path.basename(f.destination, ext);
+//                 let dir = path.dirname(f.destination);
+
+//                 let new_base = base + ' (Copy)';
+//                 f.destination = path.join(dir, new_base + ext);
+
+//             }
+
+//         }
+
+//         // sanitize file name
+//         f.destination = f.destination.replaceAll(':', '_');
+
+//         f.name = path.basename(f.destination);
+//         f.display_name = path.basename(f.destination);
+//         f.href = f.destination;
+
+//         copy_arr.push(f);
+
+//     })
+
+//     let max = copy_arr.reduce((acc, item) => { return parseInt(acc) + parseInt(item.size)}, 0);
+//     let progress_id = Math.floor(Math.random() * 1000);
+
+//     // create paste worker
+//     let paste_worker = new Worker(path.join(__dirname, 'workers/paste.js'));
+//     paste_worker.setMaxListeners(copy_arr.length);
+
+//     let paste_data = {
+//         id: progress_id,
+//         cmd: 'paste_recursive',
+//         copy_arr: copy_arr,
+//         destination: destination,
+//     }
+//     paste_worker.postMessage(paste_data);
+
+//     watcher_enabled = 0;
+//     win.send('get_cards', copy_arr);
+
+//     paste_worker.on('message', (data) => {
+//         handle_paste_worker_data(data);
+//     });
+
+// })
 
 
 ipcMain.on('paste', (e, destination) => {
@@ -2043,6 +2254,7 @@ ipcMain.on('paste', (e, destination) => {
     let copy_overwrite_arr = [];
     let overwrite = 0;
     let location = destination; //document.getElementById('location');
+    progress_id = Math.floor(Math.random() * 1000);
 
     // set active flag
     is_active = 1;
@@ -2051,236 +2263,73 @@ ipcMain.on('paste', (e, destination) => {
         copy_arr.push({ source: selected_files_arr[i], destination: path.format({ dir: location, base: path.basename(selected_files_arr[i]) }) });
     }
 
-    let paste_worker = new Worker(path.join(__dirname, 'workers/worker.js'));
+    // let paste_worker = new Worker(path.join(__dirname, 'workers/paste.js'), );
+    const paste_worker = new Worker(path.join(__dirname, 'workers/paste.js'), handle_paste_worker_data);
 
     // process data in paste_worker
     let paste_data = {
+        id: progress_id,
         cmd: 'paste_recursive',
-        // destination: path.format({ dir: destination, base: path.basename(selected_files_arr[0])}),
         copy_arr: copy_arr
     }
     paste_worker.postMessage(paste_data);
 
     paste_worker.on('message', (data) => {
-        switch (data.cmd) {
-            case 'msg': {
-                win.send('msg', data.msg, data.has_timeout);
-                break;
-            }
-            case 'progress': {
-                win.send('set_progress', data);
-                break;
-            }
-            case 'file_data': {
-                watcher_enabled = 0;
-                // let file_data = data.file_data;
-                // win.send('get_card_gio', file_data);
-                break;
-            }
-            case 'copy_arr_data': {
-                watcher_enabled = 0;
-                let copy_arr_data = data.copy_arr;
-                win.send('get_cards', copy_arr_data);
-                break;
-            }
-            case 'copy_done': {
-                if (is_main) {
-                    if (watcher_failed) {
-                        let file = gio.get_file(data.destination);
-                        win.send('remove_card', data.destination);
-                        win.send('get_card_gio', file);
-                    }
-                } else {
-                    if (!is_main) {
-                        win.send('get_folder_count', path.dirname(data.destination));
-                        win.send('get_folder_size', path.dirname(data.destination));
-                    }
-                }
-
-                win.send('lazyload');
-                win.send('clear');
-                watcher_enabled = 1;
-                break;
-            }
-
-        }
-    })
-
-    // if (selected_files_arr.length > 0) {
-
-    //     for (let i = 0; i < selected_files_arr.length; i++) {
-
-    //         let source = selected_files_arr[i];
-    //         let destination = path.format({ dir: location, base: path.basename(selected_files_arr[i]) });
-    //         let file = gio.get_file(source)
-
-    //         // Directory
-    //         if (file.type === 'directory') {
-    //             if (source == destination) {
-    //                 // destination = `${destination} (1)`;
-    //             } else {
-    //                 if (gio.exists(destination)) {
-    //                     win.send('msg', 'Overwrite not yet implemented');
-    //                     overwrite = 1;
-    //                 }
-    //             }
-
-    //         // Files
-    //         } else {
-
-    //             if (source === destination) {
-
-    //                 // check if destination file exists and loop until it doesn't
-    //                 // while (gio.exists(destination)) {
-    //                 while (source === destination) {
-
-    //                     let file = gio.get_file(destination);
-    //                     let ext = path.extname(destination);
-    //                     let base = path.basename(destination, ext);
-    //                     let dir = path.dirname(destination);
-
-    //                     let new_base = base + ' (Copy)';
-    //                     destination = path.join(dir, new_base + ext);
-
-    //                 }
-
-    //                 watcher_enabled = 0;
-    //                 let file_data = {
-    //                     display_name: path.basename(destination),
-    //                     name: path.basename(destination),
-    //                     href: destination,
-    //                     content_type: file.content_type,
-    //                     type: 'file',
-    //                     size: file.size,
-    //                     mtime: file.mtime,
-    //                     atime: file.atime,
-    //                     ctime: file.ctime,
-    //                     is_dir: file.is_dir
-    //                 }
-    //                 win.send('get_card_gio', file_data);
-
-    //                 // destination = path.dirname(destination) + '/' + path.basename(destination, path.extname(destination)) + ' (Copy)' + path.extname(destination);
-
-    //             } else {
-    //                 if (gio.exists(destination)) {
-    //                     // win.send('msg', 'Overwrite not yet implemented');
-    //                     overwrite = 1;
-    //                 }
-    //             }
-    //         }
-
-    //         let copy_data = {
-    //             source: source, //selected_files_arr[i],
-    //             destination: destination, //path.format({dir: location, base: path.basename(selected_files_arr[i])}),  //path.join(location, path.basename(selected_files_arr[i]))
-    //             is_dir: file.is_dir,
-    //             size: file.size
-    //         }
-
-    //         if (overwrite == 0) {
-    //             copy_arr.push(copy_data);
-    //         } else {
-    //             copy_overwrite_arr.push(copy_data)
-    //         }
-
-    //         if (i == selected_files_arr.length - 1) {
-
-    //             if (copy_arr.length > 0) {
-
-    //                 let paste_worker = new Worker(path.join(__dirname, 'workers/worker.js'));
-    //                 paste_worker.on('message', (data) => {
-    //                     switch (data.cmd) {
-    //                         case 'msg': {
-    //                             win.send('msg', data.msg, data.has_timeout);
-    //                             break;
-    //                         }
-    //                         case 'progress': {
-    //                             win.send('set_progress', data)
-    //                             // if (data.max === 0) {
-    //                             //     // win.send('msg', data.msg);
-    //                             // }
-    //                             break;
-    //                         }
-    //                         case 'file_data': {
-    //                             let file_data = data.file_data;
-    //                             win.send('get_card_gio', file_data);
-    //                             break;
-    //                         }
-    //                         case 'copy_done': {
-    //                             if (is_main) {
-    //                                 if (watcher_failed) {
-    //                                     let file = gio.get_file(data.destination);
-    //                                     win.send('remove_card', data.destination);
-    //                                     win.send('get_card_gio', file);
-    //                                 }
-    //                             } else {
-    //                                 if (!is_main) {
-    //                                     win.send('get_folder_count', path.dirname(data.destination));
-    //                                     win.send('get_folder_size', path.dirname(data.destination));
-    //                                 }
-    //                             }
-
-    //                             win.send('lazyload');
-    //                             win.send('clear');
-    //                             watcher_enabled = 1;
-    //                             break;
-    //                         }
-
-    //                     }
-    //                 })
-
-    //                 ipcMain.on('cancel_operation', (e) => {
-    //                     paste_worker.postMessage({ cmd: 'cancel_operation'});
-    //                 })
-
-    //                 progress_id += 1;
-    //                 let data = {
-    //                     id: progress_id,
-    //                     cmd: 'paste_recursive',
-    //                     copy_arr: copy_arr
-    //                 }
-    //                 paste_worker.postMessage(data);
-
-    //             }
-
-
-    //             if (copy_overwrite_arr.length > 0) {
-    //                 overWriteNext(copy_overwrite_arr);
-    //             }
-
-    //             copy_arr = [];
-    //             copy_overwrite_arr = [];
-    //             selected_files_arr = [];
-
-    //         }
-    //         // Reset variables
-    //         overwrite = 0;
-    //     }
-
-    // } else {
-    //     //msg(`Nothing to Paste`);
-    // }
+        handle_paste_worker_data(data);
+    });
 
 })
 
 // Move
 ipcMain.on('move', (e, destination) => {
     let copy_arr = [];
-    if (selected_files_arr.length > 0) {
-        for (let i = 0; i < selected_files_arr.length; i++) {
-            let file = gio.get_file(selected_files_arr[i]);
+
+    if (selected_files_arr2.length > 0) {
+        for (let i = 0; i < selected_files_arr2.length; i++) {
+            let f = selected_files_arr2[i];
+            let dest = path.format({ dir: destination, base: path.basename(f.href) })
             let copy_data = {
-                source: selected_files_arr[i],
-                destination: path.format({ dir: destination, base: path.basename(selected_files_arr[i]) }),
-                size: file.size,
+                source: f.href,
+                destination: dest,
+                size: f.size,
+                name: path.basename(dest),
+                display_name: path.basename(dest),
+                href: dest,
+                is_dir: f.is_dir,
+                content_type: f.content_type,
+                size: parseInt(f.size),
             }
+
             copy_arr.push(copy_data);
         }
+
+        if (is_main) {
+            watcher_enabled = 0;
+            win.send('get_cards', copy_arr);
+        }
+
         worker.postMessage({ cmd: 'mv', selected_items: copy_arr });
-        selected_files_arr = [];
+        selected_files_arr2 = [];
         copy_arr = [];
-    } else {
-        win.send('msg', `Nothing to Paste`);
     }
+
+    // if (selected_files_arr.length > 0) {
+    //     for (let i = 0; i < selected_files_arr.length; i++) {
+    //         let file = gio.get_file(selected_files_arr[i]);
+    //         let copy_data = {
+    //             source: selected_files_arr[i],
+    //             destination: path.format({ dir: destination, base: path.basename(selected_files_arr[i]) }),
+    //             size: file.size,
+    //         }
+    //         copy_arr.push(copy_data);
+    //     }
+
+    //     worker.postMessage({ cmd: 'mv', selected_items: copy_arr });
+    //     selected_files_arr = [];
+    //     copy_arr = [];
+    // } else {
+    //     win.send('msg', `Nothing to Paste`);
+    // }
 })
 
 ipcMain.on('rename', (e, source, destination) => {
