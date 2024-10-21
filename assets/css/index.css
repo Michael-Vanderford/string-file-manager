@@ -1,4 +1,5 @@
 * {
+    box-sizing: border-box;
     /* box-sizing: border-box; */
 }
 
@@ -6,7 +7,7 @@ html,
 body {
     overflow: hidden;
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 10px;
+    font-size: 12px;
     margin: 0;
     padding: 0;
     height: 100%;
@@ -386,7 +387,7 @@ th {
     padding: 5px;
     width: 100%;
     z-index: 1;
-    height: 24px;
+    height: 28px;
     align-items: center;
 }
 
@@ -423,9 +424,10 @@ th {
 }
 
 .nav_menu {
+    position: relative;
     display: flex;
     background: var(--menu);
-    padding: 5px;
+    padding: 15px;
     width: 100%;
     align-items: center;
     height: 26px;
@@ -440,7 +442,7 @@ th {
     background: var(--location);
     border: 1px solid var(--location-border);
     font-size: 1em;
-    height: 23px;
+    height: 28px;
     width: 96%;
     min-width: 250px;
     font-weight: bold;
@@ -455,7 +457,7 @@ th {
     background: var(--location);
     border: 1px solid var(--location-border);
     font-size: 1em;
-    height: 27px;
+    height: 28px;
     width: 200px;
     font-weight: bold;
     white-space: nowrap;
@@ -900,7 +902,7 @@ th {
     border: none;
     background: transparent;
     color: var(--text);
-    opacity: 0;
+    /* opacity: 0; */
     transition: opacity 0.5s;
 }
 
@@ -1097,6 +1099,7 @@ th {
 }
 
 .table thead td {
+    border: 1px solid red;
     font-weight: bold;
     padding-bottom: 5px;
 }
